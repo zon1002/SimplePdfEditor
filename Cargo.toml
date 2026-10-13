@@ -3,7 +3,7 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/pdfcore"]
+members = ["crates/pdfcore", "crates/app", "crates/shellext"]
 exclude = ["vendor"]
 
 [workspace.package]

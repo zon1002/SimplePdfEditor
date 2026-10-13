@@ -123,9 +123,9 @@ pub fn system_fonts() -> Vec<FontEntry> {
     candidates
         .iter()
         .filter_map(|(label, file)| {
+            // 只檢查檔案是否存在；實際用到時才載入（中文字型檔動輒數十 MB）
             let p = dir.join(file);
-            let path = p.to_string_lossy().into_owned();
-            font(&path, 0).map(|_| FontEntry { label: label.to_string(), path, index: 0 })
+            p.is_file().then(|| FontEntry { label: label.to_string(), path: p.to_string_lossy().into_owned(), index: 0 })
         })
         .collect()
 }

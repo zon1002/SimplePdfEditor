@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Fu Project
+
+[package]
+name = "shellext"
+description = "簡易 PDF 編輯器 — Windows 檔案總管整合（預覽處理常式與縮圖提供者）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+# 輸出檔名須為 SimplePdfPreview.dll（安裝程式以此名稱登錄 COM 伺服器）
+[lib]
+name = "SimplePdfPreview"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+# 外掛測試：不寫入登錄，直接 LoadLibrary 取得 COM 物件
+[[bin]]
+name = "shellext_test"
+path = "src/bin/shellext_test.rs"
+
+[dependencies]
+pdfcore = { workspace = true }
+# #[implement] 產生的程式碼會引用 ::windows_core
+windows-core = "0.62"
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Ole",
+    "Win32_System_SystemServices",
+    "Win32_UI_Controls",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+] }

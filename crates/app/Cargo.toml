@@ -1,0 +1,36 @@
+[package]
+name = "SimplePdfEditor"
+description = "簡易 PDF 編輯器"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "SimplePdfEditor"
+path = "src/main.rs"
+
+[dependencies]
+pdfcore = { workspace = true }
+tiny-skia = { workspace = true }
+# 介面：與 pdfcraft 相同使用 egui / eframe；以 wgpu（DX12）繪製，無法使用時改用 OpenGL
+eframe = { version = "0.36", default-features = false, features = ["default_fonts", "wgpu", "glow"] }
+egui = "0.36"
+# 系統原生的開啟／存檔對話框（Win32 IFileDialog）
+rfd = "0.17"
+raw-window-handle = "0.6"
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Storage_Xps",
+    "Win32_System_Memory",
+    "Win32_UI_Controls",
+    "Win32_UI_Controls_Dialogs",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+# exe 圖示與版本資訊
+winresource = "0.1"
