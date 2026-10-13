@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Fu Project
+
+[workspace]
+resolver = "3"
+members = ["crates/pdfcore"]
+exclude = ["vendor"]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+rust-version = "1.92"
+
+[workspace.dependencies]
+pdfcore = { path = "crates/pdfcore" }
+# 與 pdfcraft 相同的純 Rust PDF 堆疊：hayro 負責渲染與文字擷取，lopdf 負責修改與存檔
+hayro = "0.7.1"
+hayro-syntax = "0.7.2"
+lopdf = { version = "0.45", default-features = false }
+kurbo = "0.13"
+ttf-parser = "0.25"
+tiny-skia = "0.11"
+subsetter = "0.2"
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
+windows = "0.62"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "unwind"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+# 沿用 pdfcraft 修補過的版本（強化畸形 PDF 的防護），見 vendor/README.md
+[patch.crates-io]
+hayro = { path = "vendor/hayro" }
+hayro-interpret = { path = "vendor/hayro-interpret" }
+hayro-syntax = { path = "vendor/hayro-syntax" }
+hayro-jbig2 = { path = "vendor/hayro-jbig2" }
+lopdf = { path = "vendor/lopdf" }

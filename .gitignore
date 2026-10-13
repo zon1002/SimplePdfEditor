@@ -1,0 +1,5 @@
+/target
+/publish
+/dist
+/test/out
+*.pdb

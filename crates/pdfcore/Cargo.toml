@@ -1,0 +1,18 @@
+[package]
+name = "pdfcore"
+description = "簡易 PDF 編輯器核心：開檔、渲染、文字選取、註記資料模型與存檔"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hayro = { workspace = true }
+hayro-syntax = { workspace = true }
+lopdf = { workspace = true }
+kurbo = { workspace = true }
+ttf-parser = { workspace = true }
+tiny-skia = { workspace = true }
+subsetter = { workspace = true }
+flate2 = { workspace = true }
+getrandom = "0.3"
