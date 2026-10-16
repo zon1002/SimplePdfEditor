@@ -10,6 +10,9 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
+autoexamples = false
+autotests = false
+autobenches = false
 edition = "2024"
 rust-version = "1.92"
 name = "hayro"
@@ -18,9 +21,6 @@ authors = ["Laurenz Stampfl <laurenz.stampfl@gmail.com>"]
 build = false
 autolib = false
 autobins = false
-autoexamples = false
-autotests = false
-autobenches = false
 description = "A rasterizer for PDF files."
 readme = "README.md"
 license = "Apache-2.0 OR MIT"
@@ -39,10 +39,6 @@ logging = ["hayro-interpret/logging"]
 [lib]
 name = "hayro"
 path = "src/lib.rs"
-
-[[example]]
-name = "render"
-path = "examples/render.rs"
 
 [dependencies.bytemuck]
 version = "1"

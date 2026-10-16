@@ -10,6 +10,9 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
+autoexamples = false
+autotests = false
+autobenches = false
 edition = "2024"
 name = "hayro-jbig2"
 version = "0.3.0"
@@ -24,9 +27,6 @@ exclude = [
 ]
 autolib = false
 autobins = false
-autoexamples = false
-autotests = false
-autobenches = false
 description = "A memory-safe, pure-Rust JBIG2 decoder."
 readme = "README.md"
 license = "Apache-2.0 OR MIT"
@@ -53,10 +53,6 @@ std = []
 name = "hayro_jbig2"
 path = "src/lib.rs"
 
-[[example]]
-name = "jbig2png"
-path = "examples/jbig2png.rs"
-
 [dependencies.fearless_simd]
 version = "0.4.0"
 optional = true
@@ -69,29 +65,6 @@ default-features = false
 version = "0.25"
 optional = true
 default-features = false
-
-[dev-dependencies.criterion]
-version = "0.5"
-features = ["html_reports"]
-
-[dev-dependencies.image]
-version = "0.25"
-features = ["png"]
-default-features = false
-
-[dev-dependencies.indicatif]
-version = "0.17"
-features = ["rayon"]
-
-[dev-dependencies.rayon]
-version = "1.11"
-
-[dev-dependencies.serde]
-version = "1"
-features = ["derive"]
-
-[dev-dependencies.serde_json]
-version = "1"
 
 [lints.clippy]
 collection_is_never_read = "warn"

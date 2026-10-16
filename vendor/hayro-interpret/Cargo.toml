@@ -10,6 +10,9 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
+autoexamples = false
+autotests = false
+autobenches = false
 edition = "2024"
 rust-version = "1.92"
 name = "hayro-interpret"
@@ -18,9 +21,6 @@ authors = ["Laurenz Stampfl <laurenz.stampfl@gmail.com>"]
 build = false
 autolib = false
 autobins = false
-autoexamples = false
-autotests = false
-autobenches = false
 description = "A crate for interpreting PDF files."
 readme = "README.md"
 license = "Apache-2.0 OR MIT"
@@ -42,14 +42,6 @@ logging = [
 [lib]
 name = "hayro_interpret"
 path = "src/lib.rs"
-
-[[example]]
-name = "extract_html"
-path = "examples/extract_html.rs"
-
-[[example]]
-name = "extract_images"
-path = "examples/extract_images.rs"
 
 [dependencies.bitflags]
 version = "2.10"
@@ -97,11 +89,6 @@ version = "1"
 [dependencies.yoke]
 version = "0.8"
 features = ["derive"]
-
-[dev-dependencies.image]
-version = "0.25"
-features = ["png"]
-default-features = false
 
 [lints.clippy]
 collection_is_never_read = "warn"
