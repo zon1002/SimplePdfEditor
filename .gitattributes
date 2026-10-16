@@ -6,3 +6,5 @@ vendor/** -text
 *.pdf binary
 *.ico binary
 *.png binary
+dist/*.exe binary
+dist/*.zip binary

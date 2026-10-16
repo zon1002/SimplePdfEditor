@@ -1,5 +1,7 @@
+# 建置產物（可由 cargo build / publish.ps1 重新產生）
 /target
 /publish
-/dist
 /test/out
 *.pdb
+# dist/ 只放發行版：安裝程式與免安裝版
+!/dist/*.exe

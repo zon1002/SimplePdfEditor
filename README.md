@@ -7,6 +7,15 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.0.0）。
 **安裝時不需要任何額外套件**：C 執行環境靜態連結，程式只有 `SimplePdfEditor.exe` 與檔案總管外掛
 `SimplePdfPreview.dll` 兩個檔案，不需安裝 Microsoft Visual C++ 可轉發套件，也沒有 Qt 等 DLL。
 
+## 下載
+
+`dist/` 內為 v2.0.0 發行版：
+
+| 檔案 | 說明 |
+|------|------|
+| `SimplePdfEditor_Setup_v2.0.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
+| `SimplePdfEditor_v2.0.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+
 ## 功能
 
 | 工具 | 快捷鍵 | 說明 |
