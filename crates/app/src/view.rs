@@ -78,6 +78,63 @@ fn z_order(k: MarkType) -> u8 {
     }
 }
 
+/// 控制點在畫面上的大小（介面點）與點選範圍
+const HANDLE_SIZE: f32 = 8.0;
+const HANDLE_HIT: f64 = 7.0;
+
+/// 框的 8 個控制點（頁面座標）：左上、上、右上、右、右下、下、左下、左
+fn handle_points(r: &pdfcore::Rect) -> [Pt; 8] {
+    let (cx, cy) = ((r.x0 + r.x1) / 2.0, (r.y0 + r.y1) / 2.0);
+    [
+        Pt::new(r.x0, r.y0),
+        Pt::new(cx, r.y0),
+        Pt::new(r.x1, r.y0),
+        Pt::new(r.x1, cy),
+        Pt::new(r.x1, r.y1),
+        Pt::new(cx, r.y1),
+        Pt::new(r.x0, r.y1),
+        Pt::new(r.x0, cy),
+    ]
+}
+
+fn handle_cursor(handle: u8) -> egui::CursorIcon {
+    match handle {
+        0 | 4 => egui::CursorIcon::ResizeNwSe,
+        2 | 6 => egui::CursorIcon::ResizeNeSw,
+        1 | 5 => egui::CursorIcon::ResizeVertical,
+        _ => egui::CursorIcon::ResizeHorizontal,
+    }
+}
+
+/// 拖曳控制點後的新範圍：對側的邊固定不動；角落控制點按住 Shift 時維持正方形／正圓
+fn resize_rect(r: &pdfcore::Rect, handle: u8, p: Pt, shift: bool) -> pdfcore::Rect {
+    let (mut x0, mut y0, mut x1, mut y1) = (r.x0, r.y0, r.x1, r.y1);
+    match handle {
+        0 => (x0, y0) = (p.x, p.y),
+        1 => y0 = p.y,
+        2 => (x1, y0) = (p.x, p.y),
+        3 => x1 = p.x,
+        4 => (x1, y1) = (p.x, p.y),
+        5 => y1 = p.y,
+        6 => (x0, y1) = (p.x, p.y),
+        _ => x0 = p.x,
+    }
+    if shift && handle % 2 == 0 {
+        // 以對角為固定點，邊長取較長的一邊
+        let anchor = match handle {
+            0 => Pt::new(r.x1, r.y1),
+            2 => Pt::new(r.x0, r.y1),
+            4 => Pt::new(r.x0, r.y0),
+            _ => Pt::new(r.x1, r.y0),
+        };
+        let q = constrain_square(anchor, p);
+        return pdfcore::Rect::from_points(anchor, q);
+    }
+    let out = pdfcore::Rect::from_points(Pt::new(x0, y0), Pt::new(x1, y1));
+    // 最小 2 pt，避免縮成看不見、選不到的框
+    pdfcore::Rect::new(out.x0, out.y0, out.x1.max(out.x0 + 2.0), out.y1.max(out.y0 + 2.0))
+}
+
 /// 按住 Shift 時把框限制為正方形／正圓（以較長的一邊為準）
 fn constrain_square(a: Pt, b: Pt) -> Pt {
     let d = b - a;
@@ -291,6 +348,24 @@ impl App {
         best.map(|(_, i)| i)
     }
 
+    /// 可調整大小的框：選取工具下只選了一個框時
+    fn resize_target(&self) -> Option<usize> {
+        if !self.editing || self.tool != Tool::Select || self.selection.len() != 1 {
+            return None;
+        }
+        let i = self.selection[0];
+        self.model.marks.get(i).filter(|m| m.page == self.page && m.is_shape()).map(|_| i)
+    }
+
+    /// 位於某個控制點上：回傳（註記索引, 控制點）
+    fn handle_at(&self, p: Pt) -> Option<(usize, u8)> {
+        let i = self.resize_target()?;
+        let m = self.model.marks.get(i)?;
+        let tol = HANDLE_HIT / self.zoom.max(0.01);
+        let r = shape_rect(m).translate(m.offset);
+        handle_points(&r).iter().position(|h| (h.x - p.x).abs() <= tol && (h.y - p.y).abs() <= tol).map(|k| (i, k as u8))
+    }
+
     fn text_mark_at(&self, p: Pt) -> Option<usize> {
         self.model.marks.iter().enumerate().rev().find(|(_, m)| m.page == self.page && m.kind == MarkType::Text && hit(m, p)).map(|(i, _)| i)
     }
@@ -481,7 +556,13 @@ impl App {
         }
 
         // ---- 游標 ----
-        if resp.hovered() && editing {
+        let handle_hover = match &self.drag {
+            Drag::Resizing { handle, .. } => Some(*handle),
+            _ => self.cursor_pt.and_then(|(p, _)| self.handle_at(p)).map(|(_, h)| h),
+        };
+        if let (true, Some(h)) = (resp.hovered() && editing, handle_hover) {
+            ctx.set_cursor_icon(handle_cursor(h));
+        } else if resp.hovered() && editing {
             let icon = match self.tool {
                 Tool::Select => egui::CursorIcon::Default,
                 Tool::Highlight | Tool::Underline | Tool::Text => egui::CursorIcon::Text,
@@ -534,6 +615,15 @@ impl App {
                 dashed_rect(&painter, r, SELECT_BLUE);
             }
         }
+        // 框的控制點：拖曳可調整大小
+        if let Some(m) = self.resize_target().and_then(|i| self.model.marks.get(i)) {
+            let r = shape_rect(m).translate(m.offset);
+            for h in handle_points(&r) {
+                let c = mp.to_screen(h);
+                let rect = Rect::from_center_size(c, vec2(HANDLE_SIZE, HANDLE_SIZE));
+                painter.rect(rect, 1.0, Color32::WHITE, Stroke::new(1.0, SELECT_BLUE), StrokeKind::Inside);
+            }
+        }
         // 拖曳中的預覽
         match &self.drag {
             Drag::Selecting { quads, .. } => {
@@ -554,6 +644,10 @@ impl App {
     fn on_press(&mut self, pt: Pt, on_page: bool, ctrl: bool) {
         match self.tool {
             Tool::Select => {
+                if let Some((index, handle)) = self.handle_at(pt) {
+                    self.drag = Drag::Resizing { index, handle, before: self.model.marks.clone(), moved: false };
+                    return;
+                }
                 let hit = self.mark_at(pt);
                 let mut sel = self.selection.clone();
                 match hit {
@@ -602,6 +696,16 @@ impl App {
 
     fn on_move(&mut self, cur: Pt, raw: Pt, shift: bool) {
         match &mut self.drag {
+            Drag::Resizing { index, handle, before, moved } => {
+                let (Some(orig), Some(m)) = (before.get(*index), self.model.marks.get_mut(*index)) else { return };
+                let r = resize_rect(&shape_rect(orig), *handle, raw - orig.offset, shift);
+                let (p1, p2) = (Pt::new(r.x0, r.y0), Pt::new(r.x1, r.y1));
+                if p1 != m.p1 || p2 != m.p2 {
+                    m.p1 = p1;
+                    m.p2 = p2;
+                    *moved = true;
+                }
+            }
             Drag::Moving { start, before, moved } => {
                 let d = raw - *start;
                 if d.length() > 0.0 {
@@ -640,6 +744,13 @@ impl App {
     fn on_release(&mut self, pt: Option<Pt>, shift: bool) {
         let drag = std::mem::replace(&mut self.drag, Drag::None);
         match drag {
+            Drag::Resizing { before, moved, .. } => {
+                if moved {
+                    self.model.record(before);
+                    self.coalesce = None;
+                }
+                self.touch();
+            }
             Drag::Moving { before, moved, .. } => {
                 let changed = moved && before.len() == self.model.marks.len() && before.iter().zip(&self.model.marks).any(|(a, b)| a.offset != b.offset);
                 if changed {

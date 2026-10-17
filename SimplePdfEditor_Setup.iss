@@ -8,7 +8,7 @@
 
 #define AppName "SimplePdfEditor"
 #define AppDisplay "簡易 PDF 編輯器"
-#define AppVersion "2.1.0"
+#define AppVersion "2.2.0"
 #define AppPublisher "Fufeng Project"
 #define AppExe "SimplePdfEditor.exe"
 #define ShellDll "SimplePdfPreview.dll"

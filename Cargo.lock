@@ -4,11 +4,12 @@ version = 4
 
 [[package]]
 name = "SimplePdfEditor"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "eframe",
  "egui",
  "egui_kittest",
+ "image",
  "lopdf",
  "pdfcore",
  "raw-window-handle",
@@ -741,11 +742,16 @@ version = "0.36.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5eb3f3effb2726fee23449293e67acbf6cc6ce35525b1722bd5743bb348114d5"
 dependencies = [
+ "eframe",
  "egui",
+ "egui-wgpu",
+ "image",
  "kittest",
  "log",
+ "pollster 1.0.1",
  "serde",
  "toml",
+ "wgpu",
 ]
 
 [[package]]
@@ -2069,7 +2075,7 @@ dependencies = [
 
 [[package]]
 name = "pdfcore"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "flate2",
  "getrandom 0.3.4",
@@ -2616,7 +2622,7 @@ dependencies = [
 
 [[package]]
 name = "shellext"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "pdfcore",
  "windows",

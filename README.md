@@ -1,6 +1,6 @@
 # 簡易 PDF 編輯器（SimplePdfEditor）— Rust 版
 
-Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.1.0）。
+Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.0）。
 由 C++17 / Qt6 / MuPDF 的 [v1.6.0](../SimplePdfEditor) 改寫，功能維持不變，架構參考 [PdfCraft](https://github.com/storytold/pdfcraft)
 （同為純 Rust 的 PDF 工具：使用相同的 hayro 渲染、lopdf 存檔與 egui 介面，並沿用其修補版本與文字擷取模組）。
 
@@ -9,12 +9,12 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.1.0）。
 
 ## 下載
 
-`dist/` 內為 v2.1.0 發行版：
+`dist/` 內為 v2.2.0 發行版：
 
 | 檔案 | 說明 |
 |------|------|
-| `SimplePdfEditor_Setup_v2.1.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
-| `SimplePdfEditor_v2.1.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+| `SimplePdfEditor_Setup_v2.2.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
+| `SimplePdfEditor_v2.2.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
 
 ## 功能
 
@@ -33,6 +33,8 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.1.0）。
 | 矩形 | R | 拖曳畫矩形框（中間鏤空，不遮蓋內容），Shift 畫正方形；線寬、顏色、實線／虛線可調 |
 | 圓角矩形 | Q | 拖曳畫四角圓弧的矩形框，圓弧半徑可調（0–200 pt） |
 | 圓形 | O | 拖曳畫圓形／橢圓框（中間鏤空），Shift 畫正圓 |
+
+選取一個框後，四角與四邊中點會出現 8 個控制點，拖曳即可調整大小（Shift＋角落維持正方形／正圓），每次調整可復原。
 
 屬性工具列會依目前工具（或選取的註記）只顯示相關的設定：文字工具顯示字型、大小、外框、背景，線條／箭頭顯示線寬、箭頭、單向／雙向、線型、虛線、間隔。
 
@@ -84,7 +86,7 @@ target\release\shellext_test.exe target\release\SimplePdfPreview.dll test\sample
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置並整理 publish\（含煙霧測試、檢查不依賴 VC++ 執行環境）
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.1.0.exe
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.2.0.exe
 ```
 
 安裝程式沿用 v1.x 的 AppId，可直接覆蓋升級，並移除舊版的 Qt／MuPDF DLL。

@@ -186,6 +186,8 @@ pub enum Drag {
     Drawing { start: Pt, cur: Pt },
     /// 文字工具：按下後等放開再開啟對話框
     TextClick { at: Pt },
+    /// 選取工具：拖曳框的控制點調整大小（handle：0 左上、1 上、2 右上、3 右、4 右下、5 下、6 左下、7 左）
+    Resizing { index: usize, handle: u8, before: MarkList, moved: bool },
 }
 
 /// 列印工作（背景執行緒）

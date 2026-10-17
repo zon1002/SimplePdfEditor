@@ -209,3 +209,82 @@ fn select_hollow_shape_by_its_outline_and_change_radius() {
         .collect();
     assert!(subtypes.iter().any(|s| s == "Square"), "{subtypes:?}");
 }
+
+// ---------------------------------------------------------------- 控制點調整框的大小
+
+/// 畫一個框並以選取工具選取它
+fn selected_shape(tool: Tool, a: Pt, b: Pt) -> Harness<'static, App> {
+    let mut h = editing_harness();
+    h.state_mut().set_tool(tool);
+    drag(&mut h, a, b, false);
+    h.key_press(egui::Key::V);
+    h.run();
+    // 點上邊線選取
+    let top = Pt::new((a.x + b.x) / 2.0 + 10.0, a.y);
+    drag(&mut h, top, top, false);
+    assert_eq!(h.state().selection, vec![0], "應選取剛畫的框");
+    h
+}
+
+fn rect_of(h: &Harness<'static, App>) -> pdfcore::Rect {
+    pdfcore::marks::shape_rect(&h.state().model.marks[0])
+}
+
+#[test]
+fn corner_handle_resizes_both_directions_and_undo_restores() {
+    let mut h = selected_shape(Tool::Rect, Pt::new(100.0, 200.0), Pt::new(300.0, 300.0));
+    // 右下角控制點往右下拖
+    drag(&mut h, Pt::new(300.0, 300.0), Pt::new(380.0, 340.0), false);
+    let r = rect_of(&h);
+    assert!((r.x0 - 100.0).abs() < 0.5 && (r.y0 - 200.0).abs() < 0.5, "對角應固定：{r:?}");
+    assert!((r.x1 - 380.0).abs() < 0.5 && (r.y1 - 340.0).abs() < 0.5, "右下角應跟著拖曳：{r:?}");
+    assert_eq!(h.state().selection, vec![0], "調整大小後仍保持選取");
+    // 一次拖曳 = 一次復原
+    h.state_mut().undo();
+    let r = rect_of(&h);
+    assert!((r.x1 - 300.0).abs() < 0.5 && (r.y1 - 300.0).abs() < 0.5, "復原後回到原大小：{r:?}");
+}
+
+#[test]
+fn edge_handle_moves_only_that_side() {
+    let mut h = selected_shape(Tool::RoundRect, Pt::new(100.0, 200.0), Pt::new(300.0, 300.0));
+    // 左邊中點往左拖；上下不變
+    drag(&mut h, Pt::new(100.0, 250.0), Pt::new(60.0, 280.0), false);
+    let r = rect_of(&h);
+    assert!((r.x0 - 60.0).abs() < 0.5 && (r.x1 - 300.0).abs() < 0.5, "{r:?}");
+    assert!((r.y0 - 200.0).abs() < 0.5 && (r.y1 - 300.0).abs() < 0.5, "邊的控制點不應改變高度：{r:?}");
+    assert!(h.state().model.marks[0].radius > 0.0, "圓角保留");
+}
+
+#[test]
+fn shift_corner_keeps_circle_round() {
+    let mut h = selected_shape(Tool::Ellipse, Pt::new(100.0, 200.0), Pt::new(200.0, 300.0));
+    // 按住 Shift 拖右下角：維持正圓
+    drag(&mut h, Pt::new(200.0, 300.0), Pt::new(260.0, 320.0), true);
+    let r = rect_of(&h);
+    assert!((r.width() - r.height()).abs() < 0.5, "Shift 應維持正圓：{r:?}");
+    assert!((r.x0 - 100.0).abs() < 0.5 && (r.y0 - 200.0).abs() < 0.5, "對角固定：{r:?}");
+    assert!((r.width() - 160.0).abs() < 0.5, "以較長的一邊為準：{r:?}");
+}
+
+#[test]
+fn dragging_past_the_opposite_side_flips_instead_of_vanishing() {
+    let mut h = selected_shape(Tool::Rect, Pt::new(100.0, 200.0), Pt::new(300.0, 300.0));
+    // 右邊中點拖到左邊外面
+    drag(&mut h, Pt::new(300.0, 250.0), Pt::new(50.0, 250.0), false);
+    let r = rect_of(&h);
+    assert!((r.x0 - 50.0).abs() < 0.5 && (r.x1 - 100.0).abs() < 0.5, "{r:?}");
+    assert!(r.width() >= 2.0 && r.height() >= 2.0);
+}
+
+/// 輸出畫面截圖供人工檢查（需要顯示卡；`cargo test -- --ignored screenshot`）
+#[test]
+#[ignore]
+fn screenshot_resize_handles() {
+    let mut h = selected_shape(Tool::RoundRect, Pt::new(100.0, 180.0), Pt::new(330.0, 300.0));
+    crate::setup_fonts(&h.ctx);
+    h.run();
+    let img = h.render().expect("render");
+    let out = format!("{}/../../target/ui-shot.png", env!("CARGO_MANIFEST_DIR"));
+    img.save(&out).unwrap();
+}
