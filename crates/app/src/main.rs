@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 簡易 PDF 編輯器（Rust 版）
 //!

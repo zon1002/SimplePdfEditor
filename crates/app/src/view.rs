@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 單頁檢視：顯示 PDF 頁面並處理各工具的滑鼠操作。
 //! 頁面座標（pt）× 縮放 = 介面座標；頁面四周留 12 pt 邊界。

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 存檔：在原始檔的乾淨副本上套用註記（lopdf），可選頁、可加密（AES-256）。
 //!

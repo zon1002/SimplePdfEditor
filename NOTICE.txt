@@ -1,5 +1,5 @@
 ﻿簡易 PDF 編輯器（SimplePdfEditor）
-Copyright (C) 2026 Fu Project
+Copyright (C) 2026 Fufeng Project
 
 ======================================================================
 授權（中文說明）

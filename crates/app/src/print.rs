@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 列印（Win32 GDI）：系統列印對話框、逐頁點陣輸出到印表機。
 //!

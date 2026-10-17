@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 主視窗的狀態與動作：開檔、存檔、匯出、列印、復原、套用屬性等。
 

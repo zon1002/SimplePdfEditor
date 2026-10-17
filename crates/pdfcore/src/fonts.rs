@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 字型：載入字型檔、字型度量與文字排版。
 //! 編輯畫面的預覽與寫入 PDF 都使用這裡的排版結果，確保兩者位置一致。

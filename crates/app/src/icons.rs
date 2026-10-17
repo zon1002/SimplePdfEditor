@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 工具列圖示：全部以程式繪製（不需外部圖檔），提供多種風格切換。
 //! 以 24×24 的設計座標繪製，再依實際像素大小縮放。

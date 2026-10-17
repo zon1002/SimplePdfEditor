@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 對話框：文字輸入、密碼、匯出頁面 / 加密、未儲存確認、訊息。
 

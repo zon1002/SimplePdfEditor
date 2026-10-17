@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 簡易 PDF 編輯器核心（不含介面）：開檔、渲染、文字選取、註記資料模型、存檔與加密。
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 列印預覽：以預設印表機的紙張，依實際列印相同的規則擺放頁面（含所有註記）。
 

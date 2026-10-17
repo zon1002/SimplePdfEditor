@@ -1,5 +1,5 @@
 ﻿# SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 Fu Project
+# Copyright (C) 2026 Fufeng Project
 # ---------------------------------------------------------------
 # 建置 Release 並整理可散布的 publish\ 資料夾（供 Inno Setup 打包）
 #   用法：powershell -ExecutionPolicy Bypass -File publish.ps1

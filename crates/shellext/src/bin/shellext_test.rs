@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 // 外掛測試：不寫入登錄，直接 LoadLibrary 取得 COM 物件，
 // 將縮圖與預覽畫面（含捲動後）存成 BMP。
 //   shellext_test <SimplePdfPreview.dll> <file.pdf> <輸出前綴>

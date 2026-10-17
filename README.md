@@ -112,7 +112,7 @@ powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置
 
 ## 授權
 
-Copyright (C) 2026 Fu Project
+Copyright (C) 2026 Fufeng Project
 
 本專案以 **GNU Affero General Public License v3.0 或更新版本**（`AGPL-3.0-or-later`）授權，完整條款見 [LICENSE](LICENSE)，
 中英文說明見 [NOTICE.txt](NOTICE.txt)。第三方元件（全部為 MIT／Apache-2.0 等寬鬆授權）清單見
@@ -122,5 +122,5 @@ Copyright (C) 2026 Fu Project
 
 ```rust
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 ```

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 使用說明與關於視窗。
 //! 內文以簡單標記撰寫：**粗體**、`程式碼`。
@@ -364,7 +364,7 @@ pub fn show_about(ctx: &egui::Context, open: &mut bool) -> Option<usize> {
             ui.label(RichText::new(format!("簡易 PDF 編輯器 {APP_VERSION}")).size(18.0).strong());
             ui.add_space(6.0);
             paragraph(ui, "PDF 高亮、底線、文字、線條／箭頭註記，頁面匯出與 AES-256 加密、列印，以及檔案總管預覽整合。");
-            paragraph(ui, "Copyright © 2026 Fu Project");
+            paragraph(ui, "Copyright © 2026 Fufeng Project");
             paragraph(ui, "本程式為自由軟體，依 **GNU Affero 通用公眾授權條款第 3 版或（依您的選擇）任何更新版本**（AGPL-3.0-or-later）授權，您可以重新散布及修改。");
             paragraph(ui, "**本程式不提供任何擔保**，在法律允許的範圍內，亦不包含可售性或特定用途適用性的默示擔保。");
             paragraph(ui, "原始碼：請見隨附的 README.md");

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 自動測試（不開視窗）：對範例 PDF 加上各種註記，輸出完整檔與加密的部分頁面，
 //! 並以編輯畫面相同的繪圖程式輸出第 1 頁預覽（preview.png），供與 PDF 結果比對。

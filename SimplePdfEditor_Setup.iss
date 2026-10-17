@@ -1,5 +1,5 @@
 ﻿; SPDX-License-Identifier: AGPL-3.0-or-later
-; Copyright (C) 2026 Fu Project
+; Copyright (C) 2026 Fufeng Project
 ; ---------------------------------------------------------------
 ; 簡易 PDF 編輯器 - Inno Setup 安裝程式腳本
 ;   先執行 publish.ps1 產生 publish\，再以 ISCC 編譯本檔：
@@ -9,7 +9,7 @@
 #define AppName "SimplePdfEditor"
 #define AppDisplay "簡易 PDF 編輯器"
 #define AppVersion "2.0.0"
-#define AppPublisher "Fu Project"
+#define AppPublisher "Fufeng Project"
 #define AppExe "SimplePdfEditor.exe"
 #define ShellDll "SimplePdfPreview.dll"
 #define PreviewGuid "9E089D14-B74E-4DDD-A2B7-D1821458115C"

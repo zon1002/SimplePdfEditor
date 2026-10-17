@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 使用者在頁面上新增的「註記」資料模型。
 //! 所有座標都以頁面檢視座標（pt，原點左上、y 向下）表示。

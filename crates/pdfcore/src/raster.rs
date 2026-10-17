@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 以 tiny-skia 把註記畫成點陣圖：編輯畫面的文字預覽、高亮的相乘混色，以及自動測試的預覽圖。
 //! 幾何與存檔共用（line_geometry、layout_text），確保畫面與 PDF 結果一致。

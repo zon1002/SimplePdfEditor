@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Fu Project
+// Copyright (C) 2026 Fufeng Project
 
 //! 頁面檢視四周的尺規（只供編輯時對位，不會寫入 PDF）。
 //! 原點為頁面左上角；刻度隨縮放自動調整密度。
