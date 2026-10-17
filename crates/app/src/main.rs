@@ -19,6 +19,8 @@ mod print;
 mod ruler;
 mod settings;
 mod view;
+#[cfg(test)]
+mod tests;
 
 use app::App;
 use dialogs::Pending;
@@ -62,6 +64,13 @@ fn window_icon() -> Option<egui::IconData> {
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.frame_ui(ui);
+    }
+}
+
+impl App {
+    /// 整個主視窗（與 eframe 無關，供自動測試直接驅動）
+    pub fn frame_ui(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.now = ctx.input(|i| i.time);
 

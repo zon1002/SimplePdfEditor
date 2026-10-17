@@ -7,7 +7,7 @@
 use crate::document::Image;
 use crate::fonts::{TEXT_PADDING, layout_text, text_outline};
 use crate::geom::{Pt, Rect, Rgba};
-use crate::marks::{Mark, MarkType, line_geometry};
+use crate::marks::{Mark, MarkType, Seg, line_geometry, shape_path};
 use tiny_skia::{BlendMode, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
 
 fn paint(c: Rgba) -> Paint<'static> {
@@ -77,6 +77,34 @@ pub fn draw_mark(pix: &mut Pixmap, m: &Mark, origin: Pt, scale: f64) {
                 pix.fill_path(&path, &paint(m.color.with_alpha(255)), FillRule::Winding, id, None);
             }
         }
+        MarkType::Rect | MarkType::Ellipse => {
+            let tp = |p: Pt| (((p.x - origin.x) * scale) as f32, ((p.y - origin.y) * scale) as f32);
+            let mut pb = PathBuilder::new();
+            for seg in shape_path(m) {
+                match seg {
+                    Seg::Move(a) => {
+                        let (x, y) = tp(a);
+                        pb.move_to(x, y);
+                    }
+                    Seg::Line(a) => {
+                        let (x, y) = tp(a);
+                        pb.line_to(x, y);
+                    }
+                    Seg::Cubic(c1, c2, e) => {
+                        let ((ax, ay), (bx, by), (ex, ey)) = (tp(c1), tp(c2), tp(e));
+                        pb.cubic_to(ax, ay, bx, by, ex, ey);
+                    }
+                    Seg::Close => pb.close(),
+                }
+            }
+            if let Some(path) = pb.finish() {
+                let mut s = Stroke { width: (m.width * scale) as f32, line_join: LineJoin::Miter, ..Default::default() };
+                if m.dashed {
+                    s.dash = StrokeDash::new(vec![(m.dash_len.max(0.1) * scale) as f32, (m.gap_len.max(0.1) * scale) as f32], 0.0);
+                }
+                pix.stroke_path(&path, &paint(m.color.with_alpha(255)), &s, id, None);
+            }
+        }
         MarkType::Line | MarkType::Arrow => {
             let g = line_geometry(m);
             let mut pb = PathBuilder::new();
@@ -142,7 +170,7 @@ pub fn composite_highlights<'a>(img: &mut Image, marks: impl Iterator<Item = &'a
 pub fn render_page_with_marks(page: Image, marks: &[Mark], page_no: usize, scale: f64) -> Image {
     let Some(size) = tiny_skia::IntSize::from_wh(page.width, page.height) else { return page };
     let Some(mut pix) = Pixmap::from_vec(page.rgba, size) else { return Image { width: 0, height: 0, rgba: Vec::new() } };
-    let order = [MarkType::Highlight, MarkType::Underline, MarkType::Line, MarkType::Arrow, MarkType::Text];
+    let order = [MarkType::Highlight, MarkType::Underline, MarkType::Rect, MarkType::Ellipse, MarkType::Line, MarkType::Arrow, MarkType::Text];
     for kind in order {
         for m in marks.iter().filter(|m| m.page == page_no && m.kind == kind) {
             draw_mark(&mut pix, m, Pt::default(), scale);

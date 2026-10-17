@@ -59,6 +59,11 @@ pub fn run(input: &str, out_dir: &str) -> Result<String, String> {
     marks.push(da.clone());
     // 粗虛線、中箭頭、雙向
     marks.push(Mark { p1: Pt::new(72.0, 600.0), p2: Pt::new(400.0, 600.0), width: 5.0, arrow_size: 20.0, dash_len: 12.0, gap_len: 6.0, both_ends: true, ..da });
+    // 矩形、圓角矩形（虛線）、圓形框
+    let rect = Mark { kind: MarkType::Rect, color: Rgba::rgb(0xE5, 0x39, 0x35), p1: Pt::new(72.0, 650.0), p2: Pt::new(200.0, 730.0), width: 2.0, ..Default::default() };
+    marks.push(rect.clone());
+    marks.push(Mark { p1: Pt::new(230.0, 650.0), p2: Pt::new(370.0, 730.0), radius: 16.0, dashed: true, dash_len: 6.0, gap_len: 3.0, color: Rgba::rgb(0x1E, 0x63, 0xD6), ..rect.clone() });
+    marks.push(Mark { kind: MarkType::Ellipse, p1: Pt::new(400.0, 650.0), p2: Pt::new(480.0, 730.0), width: 3.0, color: Rgba::rgb(0x2E, 0x7D, 0x32), ..rect });
     // 外框 + 半透明背景
     marks.push(Mark {
         text: "外框與背景 Box".into(),

@@ -39,6 +39,7 @@ fn from32(c: Color32) -> Rgba {
 #[derive(Clone, Copy, PartialEq)]
 enum Act {
     Open,
+    Edit,
     Save,
     Export,
     Print,
@@ -94,6 +95,8 @@ impl App {
         };
         let sense = if enabled { Sense::click() } else { Sense::hover() };
         let (rect, resp) = ui.allocate_exact_size(size, sense);
+        // 無障礙資訊：讓螢幕閱讀器（與自動測試）能以名稱找到按鈕
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, enabled, selected, text));
         let vis = ui.visuals();
         if selected {
             ui.painter().rect(rect, 4.0, vis.selection.bg_fill.gamma_multiply(0.45), egui::Stroke::new(1.0, vis.selection.bg_fill), egui::StrokeKind::Inside);
@@ -129,6 +132,7 @@ impl App {
         let open = self.is_open();
         match a {
             Act::Open => self.request(Pending::OpenDialog),
+            Act::Edit if open => self.toggle_edit(),
             Act::Save if open => {
                 self.save_as();
             }
@@ -214,6 +218,7 @@ impl App {
     pub fn show_menu(&mut self, ui: &mut Ui) {
         let ctx = ui.ctx().clone();
         let open = self.is_open();
+        let editing = open && self.editing;
         let mut todo: Option<Act> = None;
         egui::MenuBar::new().ui(ui, |ui| {
             let item = |ui: &mut Ui, text: &str, sc: &str, enabled: bool, a: Act, todo: &mut Option<Act>| {
@@ -224,7 +229,7 @@ impl App {
             };
             ui.menu_button("檔案(F)", |ui| {
                 item(ui, "開啟…", "Ctrl+O", true, Act::Open, &mut todo);
-                item(ui, "另存新檔…", "Ctrl+S", open, Act::Save, &mut todo);
+                item(ui, "另存新檔…", "Ctrl+S", editing, Act::Save, &mut todo);
                 item(ui, "匯出頁面 / 加密…", "Ctrl+E", open, Act::Export, &mut todo);
                 ui.separator();
                 item(ui, "列印…", "Ctrl+P", open, Act::Print, &mut todo);
@@ -233,10 +238,12 @@ impl App {
                 item(ui, "離開", "", true, Act::Quit, &mut todo);
             });
             ui.menu_button("編輯(E)", |ui| {
-                item(ui, "復原", "Ctrl+Z", !self.model.undo_stack.is_empty(), Act::Undo, &mut todo);
-                item(ui, "取消復原", "Ctrl+Y", !self.model.redo_stack.is_empty(), Act::Redo, &mut todo);
+                item(ui, if self.editing { "取消編輯" } else { "編輯" }, "", open, Act::Edit, &mut todo);
                 ui.separator();
-                item(ui, "刪除選取的註記", "Delete", open, Act::Delete, &mut todo);
+                item(ui, "復原", "Ctrl+Z", editing && !self.model.undo_stack.is_empty(), Act::Undo, &mut todo);
+                item(ui, "取消復原", "Ctrl+Y", editing && !self.model.redo_stack.is_empty(), Act::Redo, &mut todo);
+                ui.separator();
+                item(ui, "刪除選取的註記", "Delete", editing, Act::Delete, &mut todo);
                 item(ui, "複製最後選取的文字", "Ctrl+C", open, Act::Copy, &mut todo);
             });
             ui.menu_button("檢視(V)", |ui| {
@@ -282,7 +289,7 @@ impl App {
             ui.menu_button("工具(T)", |ui| {
                 for t in Tool::ALL {
                     let b = egui::Button::new(t.name()).shortcut_text(t.key_name()).selected(self.tool == t);
-                    if ui.add_enabled(open, b).clicked() {
+                    if ui.add_enabled(editing, b).clicked() {
                         todo = Some(Act::Tool(t));
                     }
                 }
@@ -301,6 +308,7 @@ impl App {
     pub fn show_main_toolbar(&mut self, ui: &mut Ui) {
         let ctx = ui.ctx().clone();
         let open = self.is_open();
+        let editing = open && self.editing;
         let mut todo: Option<Act> = None;
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
@@ -310,18 +318,27 @@ impl App {
                 }
             };
             b(self, ui, IconId::Open, "開啟", true, Act::Open, "開啟… (Ctrl+O)", &mut todo);
-            b(self, ui, IconId::Save, "另存", open, Act::Save, "另存新檔… (Ctrl+S)", &mut todo);
+            b(self, ui, IconId::Save, "另存", editing, Act::Save, "另存新檔… (Ctrl+S)\n存檔後回到檢視狀態", &mut todo);
             b(self, ui, IconId::Export, "匯出加密", open, Act::Export, "匯出頁面 / 加密… (Ctrl+E)", &mut todo);
             b(self, ui, IconId::Print, "列印", open, Act::Print, "列印 (Ctrl+P)\n含所有註記，與另存新檔的結果相同", &mut todo);
             ui.separator();
+            // 編輯／取消編輯：按下編輯後才可改動；取消編輯則放棄所有修改，回到原始檔案
+            let (label, tip) = if self.editing {
+                ("取消編輯", "取消編輯\n放棄所有尚未儲存的修改，回到原始檔案")
+            } else {
+                ("編輯", "編輯\n開始加入高亮、底線、文字、線條等註記（原始檔案不會被改動）")
+            };
+            if self.tool_button(ui, IconId::Edit, label, editing, open, tip).clicked() {
+                todo = Some(Act::Edit);
+            }
             for t in Tool::ALL {
                 let tip = format!("{} ({})\n{}", t.name(), t.key_name(), t.hint());
-                if self.tool_button(ui, t.icon(), t.name(), self.tool == t && open, open, &tip).clicked() {
+                if self.tool_button(ui, t.icon(), t.name(), self.tool == t && editing, editing, &tip).clicked() {
                     todo = Some(Act::Tool(t));
                 }
             }
             ui.separator();
-            let (can_undo, can_redo) = (!self.model.undo_stack.is_empty(), !self.model.redo_stack.is_empty());
+            let (can_undo, can_redo) = (editing && !self.model.undo_stack.is_empty(), editing && !self.model.redo_stack.is_empty());
             b(self, ui, IconId::Undo, "復原", can_undo, Act::Undo, "復原 (Ctrl+Z)", &mut todo);
             b(self, ui, IconId::Redo, "取消復原", can_redo, Act::Redo, "取消復原 (Ctrl+Y)", &mut todo);
             ui.separator();
@@ -360,7 +377,12 @@ impl App {
 
     /// 屬性工具列：顏色、文字樣式、線條樣式（只顯示目前用得到的部分）
     pub fn show_props_toolbar(&mut self, ui: &mut Ui) {
-        let (show_text, show_line, arrow) = self.visible_bars();
+        let bars = self.visible_bars();
+        let (show_text, show_line, arrow) = (bars.text, bars.stroke, bars.arrow);
+        // 檢視模式：屬性工具列停用
+        if !self.editing {
+            ui.disable();
+        }
         ui.horizontal_wrapped(|ui| {
             // 固定高度：切換工具時頁面不會跳動
             ui.set_min_height(24.0);
@@ -468,7 +490,15 @@ impl App {
                     self.props.line_width = w;
                     self.apply_to_selection("width", |m| set_line(m, |m| &mut m.width, w));
                 }
-                ui.add_enabled_ui(arrow, |ui| {
+                if bars.radius {
+                    ui.label(" 圓角 ").on_hover_text("圓角矩形四角的圓弧半徑（0 = 直角）");
+                    let mut r = self.props.corner_radius;
+                    if ui.add(egui::DragValue::new(&mut r).range(0.0..=200.0).speed(0.3).fixed_decimals(1).suffix(" pt")).on_hover_text("圓角矩形四角的圓弧半徑（0 = 直角）").changed() {
+                        self.props.corner_radius = r;
+                        self.apply_to_selection("radius", |m| set_if(m, MarkType::Rect, |m| &mut m.radius, r));
+                    }
+                }
+                if bars.line { ui.add_enabled_ui(arrow, |ui| {
                     ui.label(" 箭頭 ").on_hover_text("箭頭長度（寬度為長度的一半）");
                     let mut a = self.props.arrow_size;
                     if ui.add(egui::DragValue::new(&mut a).range(2.0..=120.0).speed(0.3).fixed_decimals(1).suffix(" pt")).on_hover_text("箭頭長度（寬度為長度的一半）").changed() {
@@ -490,7 +520,7 @@ impl App {
                             true
                         });
                     }
-                });
+                }); }
                 ui.label(" 線型 ");
                 let mut dashed = self.props.dashed;
                 egui::ComboBox::from_id_salt("style").selected_text(if dashed { "╍╍ 虛線" } else { "━━ 實線" }).width(80.0).show_ui(ui, |ui| {
@@ -528,7 +558,8 @@ impl App {
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(RichText::new(self.tool.hint()).color(ui.visuals().weak_text_color()));
+                let hint = if !self.is_open() || self.editing { self.tool.hint() } else { "檢視模式：按「編輯」開始加入註記" };
+                ui.label(RichText::new(hint).color(ui.visuals().weak_text_color()));
                 ui.add_space(12.0);
                 let coord = match self.cursor_pt {
                     Some((p, true)) if self.is_open() => {
@@ -566,7 +597,7 @@ fn set_bool(m: &mut pdfcore::Mark, field: impl Fn(&mut pdfcore::Mark) -> &mut bo
 }
 
 fn set_line(m: &mut pdfcore::Mark, field: impl Fn(&mut pdfcore::Mark) -> &mut f64, v: f64) -> bool {
-    if !m.is_line() {
+    if !m.is_stroked() {
         return false;
     }
     let f = field(m);
@@ -576,7 +607,7 @@ fn set_line(m: &mut pdfcore::Mark, field: impl Fn(&mut pdfcore::Mark) -> &mut f6
 }
 
 fn set_line_bool(m: &mut pdfcore::Mark, field: impl Fn(&mut pdfcore::Mark) -> &mut bool, v: bool) -> bool {
-    if !m.is_line() {
+    if !m.is_stroked() {
         return false;
     }
     let f = field(m);

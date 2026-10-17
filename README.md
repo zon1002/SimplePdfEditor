@@ -1,6 +1,6 @@
 # 簡易 PDF 編輯器（SimplePdfEditor）— Rust 版
 
-Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.0.0）。
+Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.1.0）。
 由 C++17 / Qt6 / MuPDF 的 [v1.6.0](../SimplePdfEditor) 改寫，功能維持不變，架構參考 [PdfCraft](https://github.com/storytold/pdfcraft)
 （同為純 Rust 的 PDF 工具：使用相同的 hayro 渲染、lopdf 存檔與 egui 介面，並沿用其修補版本與文字擷取模組）。
 
@@ -9,14 +9,18 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.0.0）。
 
 ## 下載
 
-`dist/` 內為 v2.0.0 發行版：
+`dist/` 內為 v2.1.0 發行版：
 
 | 檔案 | 說明 |
 |------|------|
-| `SimplePdfEditor_Setup_v2.0.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
-| `SimplePdfEditor_v2.0.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+| `SimplePdfEditor_Setup_v2.1.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
+| `SimplePdfEditor_v2.1.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
 
 ## 功能
+
+開啟 PDF 後為**檢視模式**，不會改動任何內容；按工具列的 **編輯** 才能加入註記。
+**取消編輯** 會放棄所有尚未儲存的修改、回到原始檔案；在編輯模式中 **另存新檔** 後，程式改為開啟存好的檔案並回到檢視模式。
+除非在編輯模式中另存新檔，否則 PDF 原始內容一律不會被改動。
 
 | 工具 | 快捷鍵 | 說明 |
 |------|--------|------|
@@ -26,6 +30,9 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.0.0）。
 | 文字 | T | 在頁面任意位置點一下輸入文字（可多行），字型、大小、顏色可選，可加外框（顏色、粗細）與背景色（可半透明），之後可拖曳調整位置 |
 | 線條 | L | 拖曳畫線，Shift 鎖定 45°；顏色、線寬可選，可設實線／虛線並調整虛線長與間隔 |
 | 箭頭 | A | 拖曳畫箭頭（終點為箭頭端），Shift 鎖定 45°；箭頭大小、線寬可調，可選單向／雙向，可設虛線並調整虛線長與間隔 |
+| 矩形 | R | 拖曳畫矩形框（中間鏤空，不遮蓋內容），Shift 畫正方形；線寬、顏色、實線／虛線可調 |
+| 圓角矩形 | Q | 拖曳畫四角圓弧的矩形框，圓弧半徑可調（0–200 pt） |
+| 圓形 | O | 拖曳畫圓形／橢圓框（中間鏤空），Shift 畫正圓 |
 
 屬性工具列會依目前工具（或選取的註記）只顯示相關的設定：文字工具顯示字型、大小、外框、背景，線條／箭頭顯示線寬、箭頭、單向／雙向、線型、虛線、間隔。
 
@@ -48,7 +55,7 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.0.0）。
 
 編輯期間註記只存在記憶體，儲存時才以原始檔的**乾淨副本**寫入，原檔不會被改動：
 
-- 高亮、底線、線條、箭頭 → 標準 PDF 註解（Highlight / Underline / Line），其他閱讀器仍可編輯或刪除。
+- 高亮、底線、線條、箭頭、矩形、圓形 → 標準 PDF 註解（Highlight / Underline / Line / Square / Circle），其他閱讀器仍可編輯或刪除。
   外觀串流由程式自行繪製（高亮以相乘混色、線條支援可調箭頭大小與虛線），存檔結果與編輯畫面一致。
 - 文字 → 寫入頁面內容（Form XObject）並嵌入字型**子集**（Type0／Identity-H，只含用到的字形，附 ToUnicode 可複製搜尋）；
   外框與背景一併畫入，位置與編輯畫面相同。
@@ -68,7 +75,7 @@ cargo build --release --workspace
 自動測試：
 
 ```powershell
-cargo test --release -p pdfcore                                         # 對 test\sample.pdf 加上各種註記、存檔、加密匯出並重新開啟驗證
+cargo test --release --workspace                                       # 核心：加上各種註記、存檔、加密匯出並重新開啟驗證；介面：不開視窗以 egui_kittest 點擊按鈕、拖曳畫框，驗證編輯／取消編輯與各工具
 target\release\SimplePdfEditor.exe --selftest test\sample.pdf test\out  # 同上（不開視窗），另輸出 preview.png 與存檔結果 full_p1.png 供比對
 target\release\shellext_test.exe target\release\SimplePdfPreview.dll test\sample.pdf test\out\shell  # 外掛縮圖與預覽
 ```
@@ -77,7 +84,7 @@ target\release\shellext_test.exe target\release\SimplePdfPreview.dll test\sample
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置並整理 publish\（含煙霧測試、檢查不依賴 VC++ 執行環境）
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.0.0.exe
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.1.0.exe
 ```
 
 安裝程式沿用 v1.x 的 AppId，可直接覆蓋升級，並移除舊版的 Qt／MuPDF DLL。

@@ -9,6 +9,7 @@ use crate::ruler::{self, RulerColors, THICKNESS};
 use egui::{Color32, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, Ui, Vec2, pos2, vec2};
 use pdfcore::fonts::{TEXT_PADDING, text_box_rect};
 use pdfcore::geom::{distance_to_segment, point_in_polygon, quad_bounds};
+use pdfcore::marks::{flatten, shape_path, shape_rect};
 use pdfcore::{Mark, MarkType, Pt, Rgba, line_geometry};
 use std::hash::{Hash, Hasher};
 
@@ -34,6 +35,7 @@ pub fn mark_bounds(m: &Mark) -> pdfcore::Rect {
             let pad = if m.text_border { m.border_width } else { 0.0 } + 1.0;
             text_box_rect(m).expand(pad)
         }
+        MarkType::Rect | MarkType::Ellipse => shape_rect(m).expand(m.width / 2.0 + 3.0),
         MarkType::Line | MarkType::Arrow => {
             let g = line_geometry(m);
             let pad = m.width.max(6.0) + 2.0;
@@ -57,6 +59,11 @@ fn hit(m: &Mark, p: Pt) -> bool {
             distance_to_segment(p, m.p1, m.p2) <= tol || line_geometry(m).heads.iter().any(|h| point_in_polygon(p, h))
         }
         MarkType::Text => text_box_rect(m).contains(p),
+        // 框中間鏤空：只有點在外框線附近才算選到
+        MarkType::Rect | MarkType::Ellipse => {
+            let tol = (8.0f64).max(m.width + 6.0) / 2.0;
+            flatten(&shape_path(m), 8).windows(2).any(|w| distance_to_segment(p, w[0], w[1]) <= tol)
+        }
         _ => m.quads.iter().any(|q| point_in_polygon(p, q)),
     }
 }
@@ -65,9 +72,17 @@ fn z_order(k: MarkType) -> u8 {
     match k {
         MarkType::Highlight => 1,
         MarkType::Underline => 2,
+        MarkType::Rect | MarkType::Ellipse => 3,
         MarkType::Line | MarkType::Arrow => 3,
         MarkType::Text => 4,
     }
+}
+
+/// 按住 Shift 時把框限制為正方形／正圓（以較長的一邊為準）
+fn constrain_square(a: Pt, b: Pt) -> Pt {
+    let d = b - a;
+    let s = d.x.abs().max(d.y.abs());
+    Pt::new(a.x + s * d.x.signum(), a.y + s * d.y.signum())
 }
 
 /// 按住 Shift 時把線條限制在 45° 倍數
@@ -136,6 +151,45 @@ fn paint_line_mark(painter: &egui::Painter, mp: &Mapper, m: &Mark) {
     for h in &g.heads {
         let pts: Vec<Pos2> = h.iter().map(|p| mp.to_screen(*p + off)).collect();
         painter.add(Shape::convex_polygon(pts, color, Stroke::NONE));
+    }
+}
+
+/// 沿折線畫虛線（虛線相位跨線段連續）
+fn dashed_polyline(painter: &egui::Painter, pts: &[Pos2], dash: f32, gap: f32, stroke: Stroke) {
+    let (dash, gap) = (dash.max(0.5), gap.max(0.5));
+    let period = dash + gap;
+    let mut phase = 0.0f32;
+    let mut count = 0;
+    for w in pts.windows(2) {
+        let (a, b) = (w[0], w[1]);
+        let len = (b - a).length();
+        if len <= 0.0 {
+            continue;
+        }
+        let dir = (b - a) / len;
+        let mut t = 0.0f32;
+        while t < len && count < 50000 {
+            count += 1;
+            let in_dash = phase < dash;
+            let remain = if in_dash { dash - phase } else { period - phase };
+            let step = remain.min(len - t);
+            if in_dash {
+                painter.line_segment([a + dir * t, a + dir * (t + step)], stroke);
+            }
+            t += step;
+            phase = (phase + step) % period;
+        }
+    }
+}
+
+/// 矩形／圓角矩形／圓形框（中間鏤空）
+fn paint_shape(painter: &egui::Painter, mp: &Mapper, m: &Mark) {
+    let pts: Vec<Pos2> = flatten(&shape_path(m), 16).into_iter().map(|p| mp.to_screen(p + m.offset)).collect();
+    let stroke = Stroke::new((m.width * mp.zoom) as f32, c32(m.color.with_alpha(255)));
+    if m.dashed {
+        dashed_polyline(painter, &pts, (m.dash_len * mp.zoom) as f32, (m.gap_len * mp.zoom) as f32, stroke);
+    } else {
+        painter.add(Shape::line(pts, stroke));
     }
 }
 
@@ -381,6 +435,7 @@ impl App {
     #[allow(clippy::too_many_arguments)]
     fn paint_and_interact(&mut self, ui: &mut Ui, ctx: &egui::Context, resp: egui::Response, origin: Pos2, ppp: f64, pw: f64, ph: f64) {
         let mp = Mapper { origin, zoom: self.zoom };
+        self.page_origin = origin;
         let page_rect = mp.rect(&pdfcore::Rect::new(0.0, 0.0, pw, ph));
         let painter = ui.painter_at(ui.clip_rect());
 
@@ -398,19 +453,21 @@ impl App {
         let page_bounds = pdfcore::Rect::new(0.0, 0.0, pw, ph);
         let clamp = |p: Pt| Pt::new(p.x.clamp(0.0, pw), p.y.clamp(0.0, ph));
 
-        if pressed && resp.hovered() && self.dialog.is_none() {
+        // 檢視模式不處理任何編輯操作
+        let editing = self.editing;
+        if editing && pressed && resp.hovered() && self.dialog.is_none() {
             if let Some(p) = pos {
                 let pt = mp.to_page(p);
                 self.on_press(pt, page_bounds.contains(pt), mods.command);
             }
         }
-        if down {
+        if editing && down {
             if let Some(p) = pos {
                 let pt = mp.to_page(p);
                 self.on_move(clamp(pt), pt, mods.shift);
             }
         }
-        if resp.double_clicked() && self.tool == Tool::Select {
+        if editing && resp.double_clicked() && self.tool == Tool::Select {
             if let Some(p) = pos {
                 if let Some(i) = self.text_mark_at(mp.to_page(p)) {
                     self.drag = Drag::None;
@@ -418,17 +475,17 @@ impl App {
                 }
             }
         }
-        if released {
+        if editing && released {
             let pt = pos.map(|p| mp.to_page(p));
             self.on_release(pt.map(clamp), mods.shift);
         }
 
         // ---- 游標 ----
-        if resp.hovered() {
+        if resp.hovered() && editing {
             let icon = match self.tool {
                 Tool::Select => egui::CursorIcon::Default,
                 Tool::Highlight | Tool::Underline | Tool::Text => egui::CursorIcon::Text,
-                Tool::Line | Tool::Arrow => egui::CursorIcon::Crosshair,
+                Tool::Line | Tool::Arrow | Tool::Rect | Tool::RoundRect | Tool::Ellipse => egui::CursorIcon::Crosshair,
             };
             ctx.set_cursor_icon(icon);
         }
@@ -454,10 +511,12 @@ impl App {
             }
         }
         for kind in [MarkType::Underline, MarkType::Line, MarkType::Text] {
+            // 同一層（z 順序）中依加入順序繪製
             for (_, m) in marks.iter().filter(|(_, m)| z_order(m.kind) == z_order(kind)) {
                 match m.kind {
                     MarkType::Underline => paint_underline(&painter, &mp, m),
                     MarkType::Line | MarkType::Arrow => paint_line_mark(&painter, &mp, m),
+                    MarkType::Rect | MarkType::Ellipse => paint_shape(&painter, &mp, m),
                     MarkType::Text => {
                         if let Some((tex, area)) = self.text_texture(ctx, m, scale) {
                             let r = mp.rect(&area.translate(m.offset));
@@ -481,8 +540,11 @@ impl App {
                 paint_quads(&painter, &mp, quads, Pt::default(), c32(self.tool_color().with_alpha(110)));
             }
             Drag::Drawing { start, cur } => {
-                let m = self.new_line_mark(*start, *cur);
-                paint_line_mark(&painter, &mp, &m);
+                if self.tool.is_shape() {
+                    paint_shape(&painter, &mp, &self.new_shape_mark(*start, *cur));
+                } else {
+                    paint_line_mark(&painter, &mp, &self.new_line_mark(*start, *cur));
+                }
             }
             _ => {}
         }
@@ -530,7 +592,7 @@ impl App {
                     self.drag = Drag::Selecting { start: pt, quads: Vec::new(), text: String::new() };
                 }
             }
-            Tool::Line | Tool::Arrow => {
+            Tool::Line | Tool::Arrow | Tool::Rect | Tool::RoundRect | Tool::Ellipse => {
                 if on_page {
                     self.drag = Drag::Drawing { start: pt, cur: pt };
                 }
@@ -565,7 +627,11 @@ impl App {
                 }
             }
             Drag::Drawing { start, cur: c } => {
-                *c = if shift { constrain_angle(*start, cur) } else { cur };
+                *c = match (shift, self.tool.is_shape()) {
+                    (true, true) => constrain_square(*start, cur),
+                    (true, false) => constrain_angle(*start, cur),
+                    _ => cur,
+                };
             }
             _ => {}
         }
@@ -600,14 +666,24 @@ impl App {
                 }
             }
             Drag::Drawing { start, cur } => {
+                let shape = self.tool.is_shape();
                 let end = match pt {
+                    Some(p) if shift && shape => constrain_square(start, p),
                     Some(p) if shift => constrain_angle(start, p),
                     Some(p) => p,
                     None => cur,
                 };
-                let m = self.new_line_mark(start, end);
-                if m.p1.distance(m.p2) > 3.0 {
-                    self.add_mark(m);
+                if shape {
+                    let m = self.new_shape_mark(start, end);
+                    let r = shape_rect(&m);
+                    if r.width() > 3.0 && r.height() > 3.0 {
+                        self.add_mark(m);
+                    }
+                } else {
+                    let m = self.new_line_mark(start, end);
+                    if m.p1.distance(m.p2) > 3.0 {
+                        self.add_mark(m);
+                    }
                 }
             }
             Drag::None => {}

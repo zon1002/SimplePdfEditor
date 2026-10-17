@@ -10,7 +10,7 @@
 use crate::document::Document;
 use crate::fonts::{self, FontFace, layout_text};
 use crate::geom::{Affine, Pt, Rect, Rgba};
-use crate::marks::{Mark, MarkType, line_geometry};
+use crate::marks::{Mark, MarkType, Seg, line_geometry, shape_path};
 use lopdf::encryption::crypt_filters::{Aes256CryptFilter, CryptFilter};
 use lopdf::{Dictionary, EncryptionState, EncryptionVersion, LoadOptions, Object, ObjectId, Permissions, Stream, StringFormat, dictionary};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -287,6 +287,11 @@ fn apply_marks(pdf: &mut lopdf::Document, page_ids: &[ObjectId], transforms: &[A
                     push_annot(pdf, page, id)?;
                 }
             }
+            MarkType::Rect | MarkType::Ellipse => {
+                if let Some(id) = shape_annot(pdf, page, &tf, m, &date) {
+                    push_annot(pdf, page, id)?;
+                }
+            }
             MarkType::Text => {}
         }
     }
@@ -427,6 +432,66 @@ fn line_annot(pdf: &mut lopdf::Document, page: ObjectId, tf: &Affine, m: &Mark, 
     if !heads.is_empty() {
         annot.set("IC", rgb_array(m.color));
     }
+    Some(pdf.add_object(annot))
+}
+
+/// 矩形／圓角矩形／橢圓框：標準 Square／Circle 註解（中間鏤空，不填色），
+/// 外觀串流自行繪製，才能有圓角與可調虛線，並與編輯畫面一致。
+fn shape_annot(pdf: &mut lopdf::Document, page: ObjectId, tf: &Affine, m: &Mark, date: &str) -> Option<ObjectId> {
+    let r0 = crate::marks::shape_rect(m);
+    if r0.width() < 0.5 && r0.height() < 0.5 {
+        return None;
+    }
+    let fp = |p: Pt| tf.apply(p + m.offset);
+    let k = tf.scale_factor();
+    let width = m.width * k;
+    let (dash, gap) = (m.dash_len.max(0.1) * k, m.gap_len.max(0.1) * k);
+
+    let mut c = String::new();
+    let _ = writeln!(c, "{} {} w 0 j 0 J", rgb_op(m.color, true), n(width));
+    if m.dashed {
+        let _ = writeln!(c, "[{} {}] 0 d", n(dash), n(gap));
+    }
+    for seg in shape_path(m) {
+        match seg {
+            Seg::Move(a) => {
+                let a = fp(a);
+                let _ = write!(c, "{} {} m ", n(a.x), n(a.y));
+            }
+            Seg::Line(a) => {
+                let a = fp(a);
+                let _ = write!(c, "{} {} l ", n(a.x), n(a.y));
+            }
+            Seg::Cubic(c1, c2, e) => {
+                let (c1, c2, e) = (fp(c1), fp(c2), fp(e));
+                let _ = write!(c, "{} {} {} {} {} {} c ", n(c1.x), n(c1.y), n(c2.x), n(c2.y), n(e.x), n(e.y));
+            }
+            Seg::Close => {
+                let _ = write!(c, "h ");
+            }
+        }
+    }
+    let _ = writeln!(c, "S");
+    // 外框（含線寬）
+    let outer = tf.transform_rect(&r0.translate(m.offset)).expand(width / 2.0 + 1.0);
+    let ap = add_appearance(pdf, &outer, None, c);
+
+    let mut bs = dictionary! { "Type" => "Border", "W" => real(width), "S" => if m.dashed { "D" } else { "S" } };
+    if m.dashed {
+        bs.set("D", Object::Array(vec![real(dash), real(gap)]));
+    }
+    let annot = dictionary! {
+        "Type" => "Annot",
+        "Subtype" => if m.kind == MarkType::Ellipse { "Circle" } else { "Square" },
+        "Rect" => rect_array(&outer),
+        "BS" => bs,
+        "C" => rgb_array(m.color),
+        "F" => 4,
+        "P" => Object::Reference(page),
+        "M" => Object::string_literal(date),
+        "CreationDate" => Object::string_literal(date),
+        "AP" => dictionary! { "N" => Object::Reference(ap) },
+    };
     Some(pdf.add_object(annot))
 }
 

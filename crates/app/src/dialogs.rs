@@ -92,6 +92,8 @@ pub enum Dialog {
     Text { title: &'static str, text: String, target: TextTarget, focus: bool },
     Export(ExportForm),
     Discard { then: Pending },
+    /// 取消編輯：有未儲存的修改時先確認
+    CancelEdit,
 }
 
 enum Outcome {
@@ -103,6 +105,7 @@ enum Outcome {
     Export(SaveOptions, String),
     DiscardSave(Pending),
     DiscardDrop(Pending),
+    CancelEdit,
 }
 
 fn buttons(ui: &mut egui::Ui, ok: &str, cancel: &str) -> (bool, bool) {
@@ -278,6 +281,25 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 outcome = Outcome::Close;
             }
         }
+        Dialog::CancelEdit => {
+            Modal::new(Id::new("dlg_cancel_edit")).show(ctx, |ui| {
+                ui.label(RichText::new("取消編輯").strong().size(16.0));
+                ui.add_space(6.0);
+                ui.label("要放棄目前所有的編輯，回到原始檔案的狀態嗎？\n（原始 PDF 檔不會被改動）");
+                ui.add_space(10.0);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("繼續編輯").clicked() {
+                        outcome = Outcome::Close;
+                    }
+                    if ui.add(egui::Button::new("放棄編輯").min_size(egui::vec2(72.0, 0.0))).clicked() {
+                        outcome = Outcome::CancelEdit;
+                    }
+                });
+            });
+            if escape {
+                outcome = Outcome::Close;
+            }
+        }
     }
 
     match outcome {
@@ -300,6 +322,10 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             if app.save_as() {
                 app.run_pending(then);
             }
+        }
+        Outcome::CancelEdit => {
+            app.dialog = None;
+            app.cancel_edit();
         }
         Outcome::DiscardDrop(then) => {
             app.dialog = None;

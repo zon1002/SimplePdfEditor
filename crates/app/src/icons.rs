@@ -11,12 +11,16 @@ pub enum IconId {
     Open,
     Save,
     Export,
+    Edit,
     Select,
     Highlight,
     Underline,
     Text,
     Line,
     Arrow,
+    Rect,
+    RoundRect,
+    Ellipse,
     Undo,
     Redo,
     Prev,
@@ -124,12 +128,16 @@ fn accent_of(id: IconId) -> C {
         IconId::Open => C::rgb(0xE8, 0xA3, 0x17),
         IconId::Save => C::rgb(0x3B, 0x82, 0xF6),
         IconId::Export => C::rgb(0x8B, 0x5C, 0xF6),
+        IconId::Edit => C::rgb(0xF5, 0x9E, 0x0B),
         IconId::Select => C::rgb(0x64, 0x74, 0x8B),
         IconId::Highlight => C::rgb(0xEA, 0xB3, 0x08),
         IconId::Underline => C::rgb(0xEF, 0x44, 0x44),
         IconId::Text => C::rgb(0x0E, 0xA5, 0xE9),
         IconId::Line => C::rgb(0x10, 0xB9, 0x81),
         IconId::Arrow => C::rgb(0xF9, 0x73, 0x16),
+        IconId::Rect => C::rgb(0xDC, 0x26, 0x26),
+        IconId::RoundRect => C::rgb(0x25, 0x63, 0xEB),
+        IconId::Ellipse => C::rgb(0x16, 0xA3, 0x4A),
         IconId::Undo | IconId::Redo => C::rgb(0x63, 0x66, 0xF1),
         IconId::Prev | IconId::Next => C::rgb(0x64, 0x74, 0x8B),
         IconId::ZoomOut | IconId::ZoomIn | IconId::FitWidth => C::rgb(0x14, 0xB8, 0xA6),
@@ -321,6 +329,12 @@ fn draw_icon(cv: &mut Canvas<'_>, id: IconId, k: &Ink) {
             cv.stroke(&pb.finish(), k.edge);
             cv.fill(&rounded_rect(12.5, 14.0, 9.0, 7.0, 1.5), k.solid);
         }
+        IconId::Edit => {
+            // 鉛筆：筆身、筆尖、筆身上的分隔線
+            cv.shape(&poly(&[(15.5, 4.0), (20.0, 8.5), (9.5, 19.0), (5.0, 14.5)], true), k);
+            cv.fill(&poly(&[(5.0, 14.5), (9.5, 19.0), (3.5, 20.5)], true), k.solid);
+            cv.stroke(&poly(&[(13.0, 6.5), (17.5, 11.0)], false), k.detail);
+        }
         IconId::Select => {
             cv.shape(&poly(&[(6.0, 3.0), (6.0, 19.0), (10.3, 15.2), (13.3, 21.5), (16.2, 20.2), (13.2, 14.0), (19.0, 14.0)], true), k);
         }
@@ -356,6 +370,10 @@ fn draw_icon(cv: &mut Canvas<'_>, id: IconId, k: &Ink) {
             cv.fill(&head, k.solid);
             cv.stroke(&head, Pen { color: k.solid, width: 1.2 });
         }
+        // 框的圖示只畫外框（與實際的鏤空框相同）
+        IconId::Rect => cv.stroke(&rect(4.0, 6.0, 16.0, 12.0), k.edge.thicker(k.boost + 0.4)),
+        IconId::RoundRect => cv.stroke(&rounded_rect(4.0, 6.0, 16.0, 12.0, 4.0), k.edge.thicker(k.boost + 0.4)),
+        IconId::Ellipse => cv.stroke(&ellipse(12.0, 12.0, 8.0, 8.0), k.edge.thicker(k.boost + 0.4)),
         IconId::Undo => draw_undo(cv, k),
         IconId::Redo => {
             let saved = cv.t;

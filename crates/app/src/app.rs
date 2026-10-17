@@ -25,10 +25,23 @@ pub enum Tool {
     Text,
     Line,
     Arrow,
+    Rect,
+    RoundRect,
+    Ellipse,
 }
 
 impl Tool {
-    pub const ALL: [Tool; 6] = [Tool::Select, Tool::Highlight, Tool::Underline, Tool::Text, Tool::Line, Tool::Arrow];
+    pub const ALL: [Tool; 9] = [
+        Tool::Select,
+        Tool::Highlight,
+        Tool::Underline,
+        Tool::Text,
+        Tool::Line,
+        Tool::Arrow,
+        Tool::Rect,
+        Tool::RoundRect,
+        Tool::Ellipse,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -38,6 +51,9 @@ impl Tool {
             Tool::Text => "文字",
             Tool::Line => "線條",
             Tool::Arrow => "箭頭",
+            Tool::Rect => "矩形",
+            Tool::RoundRect => "圓角矩形",
+            Tool::Ellipse => "圓形",
         }
     }
     pub fn key(self) -> egui::Key {
@@ -48,6 +64,9 @@ impl Tool {
             Tool::Text => egui::Key::T,
             Tool::Line => egui::Key::L,
             Tool::Arrow => egui::Key::A,
+            Tool::Rect => egui::Key::R,
+            Tool::RoundRect => egui::Key::Q,
+            Tool::Ellipse => egui::Key::O,
         }
     }
     pub fn key_name(self) -> &'static str {
@@ -58,6 +77,9 @@ impl Tool {
             Tool::Text => "T",
             Tool::Line => "L",
             Tool::Arrow => "A",
+            Tool::Rect => "R",
+            Tool::RoundRect => "Q",
+            Tool::Ellipse => "O",
         }
     }
     pub fn icon(self) -> IconId {
@@ -68,7 +90,14 @@ impl Tool {
             Tool::Text => IconId::Text,
             Tool::Line => IconId::Line,
             Tool::Arrow => IconId::Arrow,
+            Tool::Rect => IconId::Rect,
+            Tool::RoundRect => IconId::RoundRect,
+            Tool::Ellipse => IconId::Ellipse,
         }
+    }
+    /// 以拖曳畫出的框（矩形、圓角矩形、圓形）
+    pub fn is_shape(self) -> bool {
+        matches!(self, Tool::Rect | Tool::RoundRect | Tool::Ellipse)
     }
     pub fn hint(self) -> &'static str {
         match self {
@@ -78,6 +107,9 @@ impl Tool {
             Tool::Text => "文字：在頁面上點一下輸入文字；點既有文字可修改",
             Tool::Line => "線條：拖曳畫線，按住 Shift 鎖定 45° 角",
             Tool::Arrow => "箭頭：拖曳畫箭頭（終點為箭頭端），按住 Shift 鎖定 45° 角",
+            Tool::Rect => "矩形：拖曳畫出矩形框（中間鏤空，不遮蓋內容），按住 Shift 畫正方形",
+            Tool::RoundRect => "圓角矩形：拖曳畫出四角圓弧的矩形框，圓弧半徑可調，按住 Shift 畫正方形",
+            Tool::Ellipse => "圓形：拖曳畫出圓形／橢圓框（中間鏤空），按住 Shift 畫正圓",
         }
     }
     fn index(self) -> usize {
@@ -87,7 +119,7 @@ impl Tool {
 
 /// 新註記使用的屬性（由屬性工具列設定）
 pub struct ToolProps {
-    pub colors: [Rgba; 6],
+    pub colors: [Rgba; 9],
     pub font: usize,
     pub font_size: f64,
     pub line_width: f64,
@@ -101,6 +133,8 @@ pub struct ToolProps {
     pub dashed: bool,
     pub dash_len: f64,
     pub gap_len: f64,
+    /// 圓角矩形的圓弧半徑（pt）
+    pub corner_radius: f64,
 }
 
 impl Default for ToolProps {
@@ -108,7 +142,7 @@ impl Default for ToolProps {
         let red = Rgba::rgb(0xE5, 0x39, 0x35);
         Self {
             // 每個工具各自記住顏色：選取、高亮、底線、文字、線條、箭頭
-            colors: [red, Rgba::rgb(0xFF, 0xEB, 0x3B), red, Rgba::rgb(0x1A, 0x1A, 0x1A), red, red],
+            colors: [red, Rgba::rgb(0xFF, 0xEB, 0x3B), red, Rgba::rgb(0x1A, 0x1A, 0x1A), red, red, red, red, red],
             font: 0,
             font_size: 16.0,
             line_width: 2.0,
@@ -122,8 +156,23 @@ impl Default for ToolProps {
             dashed: false,
             dash_len: 6.0,
             gap_len: 4.0,
+            corner_radius: 12.0,
         }
     }
+}
+
+/// 屬性工具列要顯示的部分
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Bars {
+    /// 文字樣式
+    pub text: bool,
+    /// 線寬與線型（線條、箭頭、框）
+    pub stroke: bool,
+    /// 線條／箭頭專用（箭頭大小、單向／雙向）
+    pub line: bool,
+    pub arrow: bool,
+    /// 圓角半徑
+    pub radius: bool,
 }
 
 /// 頁面上的滑鼠操作
@@ -156,6 +205,8 @@ pub struct App {
     /// 縮放：每 pt 幾個介面點
     pub zoom: f64,
     pub tool: Tool,
+    /// 編輯模式：按「編輯」後才可加入或修改註記；檢視模式不會改動任何內容
+    pub editing: bool,
     pub props: ToolProps,
     pub fonts: Vec<FontEntry>,
     pub selection: Vec<usize>,
@@ -170,6 +221,8 @@ pub struct App {
     pub view_size: egui::Vec2,
     pub cursor_pt: Option<(Pt, bool)>,
     pub cursor_screen: Option<egui::Pos2>,
+    /// 目前頁面左上角在畫面上的位置（頁面座標 × 縮放 + 此值 = 畫面座標）
+    pub page_origin: egui::Pos2,
     /// 頁面點陣（未疊加高亮）：(頁碼, 縮放) -> 影像
     pub base_img: Option<((usize, u64), Image)>,
     /// 頁面貼圖：(頁碼, 縮放, 註記版本, 是否排除移動中的高亮)
@@ -201,6 +254,7 @@ impl App {
             page: 0,
             zoom: 1.0,
             tool: Tool::Highlight,
+            editing: false,
             props: ToolProps::default(),
             fonts,
             selection: Vec::new(),
@@ -213,6 +267,7 @@ impl App {
             view_size: egui::vec2(800.0, 600.0),
             cursor_pt: None,
             cursor_screen: None,
+            page_origin: egui::Pos2::ZERO,
             base_img: None,
             page_tex: None,
             text_tex: HashMap::new(),
@@ -298,6 +353,7 @@ impl App {
         match Document::open_bytes(bytes.clone(), path, password) {
             Ok(doc) => {
                 self.doc = Some(doc);
+                self.editing = false;
                 self.model.reset();
                 self.touch();
                 self.selection.clear();
@@ -316,6 +372,31 @@ impl App {
             }
             Err(OpenError::Invalid(e)) => self.error_box(format!("無法開啟：{path}\n{e}")),
         }
+    }
+
+    /// 「編輯／取消編輯」按鈕
+    pub fn toggle_edit(&mut self) {
+        if self.doc.is_none() {
+            return;
+        }
+        if !self.editing {
+            self.editing = true;
+            self.message("編輯模式：可加入註記；按「取消編輯」放棄所有修改，或另存新檔保留", 5.0);
+        } else if self.model.dirty {
+            self.dialog = Some(Dialog::CancelEdit);
+        } else {
+            self.cancel_edit();
+        }
+    }
+
+    /// 放棄所有編輯，回到原始檔案的狀態
+    pub fn cancel_edit(&mut self) {
+        self.model.reset();
+        self.selection.clear();
+        self.drag = Drag::None;
+        self.coalesce = None;
+        self.editing = false;
+        self.touch();
     }
 
     pub fn go_to_page(&mut self, page: usize) {
@@ -345,6 +426,9 @@ impl App {
     }
 
     pub fn set_tool(&mut self, t: Tool) {
+        if !self.editing {
+            return;
+        }
         self.tool = t;
         self.drag = Drag::None;
         if t != Tool::Select {
@@ -355,13 +439,13 @@ impl App {
     // ------------------------------------------------------------ 編輯
 
     pub fn undo(&mut self) {
-        if self.model.undo() {
+        if self.editing && self.model.undo() {
             self.after_undo_redo();
         }
     }
 
     pub fn redo(&mut self) {
-        if self.model.redo() {
+        if self.editing && self.model.redo() {
             self.after_undo_redo();
         }
     }
@@ -373,7 +457,7 @@ impl App {
     }
 
     pub fn delete_selected(&mut self) {
-        if self.selection.is_empty() {
+        if !self.editing || self.selection.is_empty() {
             return;
         }
         self.model.snapshot();
@@ -403,7 +487,7 @@ impl App {
 
     /// 把屬性套用到選取的註記；`key` 相同且持續調整時合併成一次復原
     pub fn apply_to_selection(&mut self, key: &'static str, f: impl Fn(&mut Mark) -> bool) {
-        if self.selection.is_empty() {
+        if !self.editing || self.selection.is_empty() {
             return;
         }
         let before = self.model.marks.clone();
@@ -440,20 +524,26 @@ impl App {
     }
 
     /// 選取工具時，屬性工具列依選到的註記類型顯示
-    pub fn visible_bars(&self) -> (bool, bool, bool) {
-        let mut text = self.tool == Tool::Text;
-        let mut line = matches!(self.tool, Tool::Line | Tool::Arrow);
-        let mut arrow = self.tool == Tool::Arrow;
+    pub fn visible_bars(&self) -> Bars {
+        let mut b = Bars {
+            text: self.tool == Tool::Text,
+            stroke: matches!(self.tool, Tool::Line | Tool::Arrow) || self.tool.is_shape(),
+            line: matches!(self.tool, Tool::Line | Tool::Arrow),
+            arrow: self.tool == Tool::Arrow,
+            radius: self.tool == Tool::RoundRect,
+        };
         if self.tool == Tool::Select {
             for &i in &self.selection {
                 if let Some(m) = self.model.marks.get(i) {
-                    text |= m.kind == MarkType::Text;
-                    line |= m.is_line();
-                    arrow |= m.kind == MarkType::Arrow;
+                    b.text |= m.kind == MarkType::Text;
+                    b.stroke |= m.is_stroked();
+                    b.line |= m.is_line();
+                    b.arrow |= m.kind == MarkType::Arrow;
+                    b.radius |= m.kind == MarkType::Rect;
                 }
             }
         }
-        (text, line, arrow)
+        b
     }
 
     /// 選取改變時，屬性工具列顯示第一個選取註記的設定
@@ -471,8 +561,11 @@ impl App {
                 self.props.border_color = m.border_color;
                 self.props.fill_color = m.fill_color;
             }
-            MarkType::Line | MarkType::Arrow => {
+            MarkType::Line | MarkType::Arrow | MarkType::Rect | MarkType::Ellipse => {
                 self.props.line_width = m.width;
+                if m.kind == MarkType::Rect {
+                    self.props.corner_radius = m.radius;
+                }
                 if m.kind == MarkType::Arrow {
                     self.props.arrow_size = m.arrow_size;
                     self.props.both_ends = m.both_ends;
@@ -491,6 +584,23 @@ impl App {
         if changed {
             self.coalesce = None;
             self.sync_from_selection();
+        }
+    }
+
+    /// 以目前工具列設定建立矩形／圓角矩形／圓形框
+    pub fn new_shape_mark(&self, a: Pt, b: Pt) -> Mark {
+        Mark {
+            kind: if self.tool == Tool::Ellipse { MarkType::Ellipse } else { MarkType::Rect },
+            page: self.page,
+            color: self.tool_color(),
+            p1: a,
+            p2: b,
+            width: self.props.line_width,
+            radius: if self.tool == Tool::RoundRect { self.props.corner_radius } else { 0.0 },
+            dashed: self.props.dashed,
+            dash_len: self.props.dash_len,
+            gap_len: self.props.gap_len,
+            ..Default::default()
         }
     }
 
@@ -611,7 +721,9 @@ impl App {
     }
 
     pub fn save_as(&mut self) -> bool {
-        let Some(doc) = &self.doc else { return false };
+        if self.doc.is_none() || !self.editing {
+            return false;
+        }
         let (dir, stem) = self.base_name();
         let Some(out) = rfd::FileDialog::new()
             .set_title("另存新檔")
@@ -622,10 +734,27 @@ impl App {
         else {
             return false;
         };
-        let out = out.to_string_lossy().into_owned();
+        self.save_to_path(&out.to_string_lossy())
+    }
+
+    /// 存到指定檔案；成功後開啟存好的檔案並回到檢視模式
+    pub fn save_to_path(&mut self, out: &str) -> bool {
+        let Some(doc) = &self.doc else { return false };
+        if !self.editing {
+            return false;
+        }
+        let out = out.to_string();
         match save(doc, &self.model.marks, &SaveOptions::default(), &out) {
             Ok(()) => {
+                // 存檔後改開啟存好的檔案（成為新的原始狀態），回到檢視模式；保留目前頁碼與縮放
+                let (page, zoom) = (self.page, self.zoom);
                 self.model.dirty = false;
+                self.open_path(&out);
+                if self.doc.as_ref().is_some_and(|d| d.path() == out) {
+                    self.fit_pending = false;
+                    self.zoom = zoom;
+                    self.page = page.min(self.page_count().saturating_sub(1));
+                }
                 self.message(format!("已儲存：{out}"), 5.0);
                 true
             }
@@ -707,7 +836,8 @@ impl App {
         match &self.doc {
             Some(d) => {
                 let name = Path::new(d.path()).file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-                format!("{name}{} - {APP_TITLE}", if self.model.dirty { "*" } else { "" })
+                let mode = if self.editing { "（編輯中）" } else { "" };
+                format!("{name}{}{mode} - {APP_TITLE}", if self.model.dirty { "*" } else { "" })
             }
             None => APP_TITLE.to_string(),
         }
