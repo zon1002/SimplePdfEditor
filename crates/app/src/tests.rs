@@ -407,7 +407,8 @@ fn ocr_packs() -> Option<String> {
 }
 
 /// 模擬掃描檔：範例檔第 1 頁轉成 200 dpi 的圖片，沒有文字層
-fn scanned_pdf(name: &str) -> String {
+/// `footer`：再加一行真正的文字（例如 pdfFactory 試用版在每頁底部加的字樣）
+fn scanned_pdf_with(name: &str, footer: Option<&str>) -> String {
     use lopdf::{Object, Stream, dictionary};
     let out = format!("{}/../../target/edit-mode-test", env!("CARGO_MANIFEST_DIR"));
     std::fs::create_dir_all(&out).unwrap();
@@ -423,17 +424,26 @@ fn scanned_pdf(name: &str) -> String {
     );
     st.compress().unwrap();
     let im = doc.add_object(st);
-    let content = doc.add_object(Stream::new(dictionary! {}, format!("q {w} 0 0 {h} 0 0 cm /Im0 Do Q").into_bytes()));
+    let mut ops = format!("q {w} 0 0 {h} 0 0 cm /Im0 Do Q");
+    if let Some(t) = footer {
+        ops += &format!(" BT /F1 9 Tf 40 12 Td ({t}) Tj ET");
+    }
+    let content = doc.add_object(Stream::new(dictionary! {}, ops.into_bytes()));
+    let font = doc.add_object(dictionary! { "Type" => "Font", "Subtype" => "Type1", "BaseFont" => "Helvetica" });
     let pages = doc.new_object_id();
     let page = doc.add_object(dictionary! {
         "Type" => "Page", "Parent" => pages, "MediaBox" => vec![0.into(), 0.into(), Object::Real(w as f32), Object::Real(h as f32)],
-        "Contents" => content, "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => im } },
+        "Contents" => content, "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => im }, "Font" => dictionary! { "F1" => font } },
     });
     doc.objects.insert(pages, Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => vec![page.into()], "Count" => 1 }));
     let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages });
     doc.trailer.set("Root", catalog);
     doc.save(&out).unwrap();
     out
+}
+
+fn scanned_pdf(name: &str) -> String {
+    scanned_pdf_with(name, None)
 }
 
 fn wait_ocr(h: &mut Harness<'static, App>) {
@@ -522,7 +532,7 @@ fn ocr_is_undone_in_one_step_and_rerun_replaces_page_result() {
 }
 
 #[test]
-fn skip_pages_that_already_have_text() {
+fn skip_pages_that_only_have_existing_text() {
     if ocr_packs().is_none() {
         return;
     }
@@ -535,7 +545,7 @@ fn skip_pages_that_already_have_text() {
     h.get_by_label("開始辨識").click();
     h.step();
     wait_ocr(&mut h);
-    assert!(h.state().model.marks.is_empty(), "已有文字的頁面預設略過");
+    assert!(h.state().model.marks.is_empty(), "只有原有文字的頁面預設略過");
     assert!(!h.state().model.dirty);
 }
 
@@ -619,4 +629,29 @@ fn screenshot_pack_download() {
     let img = h.render().expect("render");
     img.save(format!("{}/../../target/ui-ocr-download.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
     assert!(ocr::packs::find_installed("ko").is_some() && ocr::packs::find_installed("engine").is_some(), "應已下載並安裝韓文與辨識引擎");
+}
+
+/// 回歸：掃描檔（或 CAD 圖面）帶一行真正的頁尾文字時，仍要辨識其他內容，且頁尾不重複
+#[test]
+fn page_with_footer_text_is_still_recognized_without_duplicating_it() {
+    if ocr_packs().is_none() {
+        return;
+    }
+    let footer = "PDF created with pdfFactory Pro trial version www.pdffactory.com";
+    let mut app = App::new(0);
+    app.open_path(&scanned_pdf_with("scanned-footer", Some(footer)));
+    assert!(app.doc.as_ref().unwrap().page_text(0).plain_text().contains("pdfFactory"));
+    let mut h = harness(app);
+    h.run();
+    h.get_by_label("編輯").click();
+    h.run();
+    h.state_mut().open_ocr_dialog();
+    h.run();
+    h.get_by_label("開始辨識").click();
+    h.step();
+    wait_ocr(&mut h);
+    let all: String = h.state().model.marks.iter().filter(|m| m.kind == MarkType::Ocr).flat_map(|m| m.ocr.iter()).map(|l| l.text.clone()).collect::<Vec<_>>().join("
+");
+    assert!(all.contains("quick brown fox") && all.contains("中文測試"), "{all}");
+    assert!(!all.to_lowercase().contains("pdffactory"), "原有的頁尾文字不應重複辨識：{all}");
 }

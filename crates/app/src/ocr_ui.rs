@@ -27,7 +27,8 @@ pub struct OcrDialog {
     pub pages: String,
     pub tier: String,
     pub extra: Vec<String>,
-    pub skip_text: bool,
+    /// 保留 PDF 原有的文字：辨識時遮掉原有文字的位置，只辨識其他部分（圖片、掃描、外框化的文字）
+    pub keep_text: bool,
     pub error: Option<String>,
     installed: Vec<InstalledPack>,
 }
@@ -129,7 +130,7 @@ impl App {
             pages: (self.page + 1).to_string(),
             tier,
             extra,
-            skip_text: true,
+            keep_text: true,
             error: None,
             installed,
         });
@@ -157,7 +158,10 @@ impl App {
                     ui.radio_value(&mut d.range, OcrRange::Pages, "指定頁碼：");
                     ui.add_enabled(d.range == OcrRange::Pages, egui::TextEdit::singleline(&mut d.pages).hint_text("例如：1,3,5-8").desired_width(120.0));
                 });
-                ui.checkbox(&mut d.skip_text, "略過已有文字的頁面（非掃描頁）");
+                ui.checkbox(&mut d.keep_text, "保留 PDF 原有的文字，只辨識其他部分（建議）")
+                    .on_hover_text("原有的文字不重複辨識；圖片、掃描內容、CAD 圖面等沒有文字層的部分照常辨識。
+頁面只有原有文字時直接略過。
+取消勾選則整頁重新辨識（原有文字會重複一份）。");
             });
             egui::Frame::group(ui.style()).show(ui, |ui| {
                 ui.set_width(ui.available_width());
@@ -235,7 +239,7 @@ impl App {
         self.settings.ocr_langs = d.extra.clone();
         self.settings.save();
 
-        let skip_text = d.skip_text;
+        let keep_text = d.keep_text;
         let bytes = doc.bytes().clone();
         let password = doc.password().to_string();
         let progress = Arc::new(AtomicUsize::new(0));
@@ -244,7 +248,7 @@ impl App {
         let total = pages.len();
         let (p2, c2, s2) = (progress.clone(), cancel.clone(), status.clone());
         let handle = std::thread::spawn(move || {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_ocr(&bytes, &password, &pages, skip_text, &engine, &tier, &extra, &p2, &c2, &s2)))
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_ocr(&bytes, &password, &pages, keep_text, &engine, &tier, &extra, &p2, &c2, &s2)))
                 .unwrap_or_else(|_| Err("辨識時發生錯誤".into()))
         });
         self.ocr_job = Some(OcrJob { progress, total, cancel, status, handle: Some(handle) });
@@ -546,7 +550,7 @@ fn run_ocr(
     bytes: &[u8],
     password: &str,
     pages: &[usize],
-    skip_text: bool,
+    keep_text: bool,
     engine: &InstalledPack,
     tier: &InstalledPack,
     extra: &[InstalledPack],
@@ -566,18 +570,27 @@ fn run_ocr(
         if cancel.load(Ordering::Relaxed) {
             return Err("已取消".into());
         }
-        if skip_text && doc.page_text(page).plain_text().chars().filter(|c| !c.is_whitespace()).count() >= 10 {
-            set(format!("第 {} 頁已有文字，略過", page + 1));
-            progress.store(i + 1, Ordering::Relaxed);
-            continue;
-        }
         set(format!("正在辨識第 {} 頁…", page + 1));
         let (pw, ph) = doc.page_size(page);
         let scale = (OCR_DPI / 72.0).min(OCR_MAX_SIDE / pw.max(ph).max(1.0));
         let Some(img) = doc.render(page, scale) else { continue };
         // 實際比例（頁面過大時渲染器會自動縮小）
         let real = img.width as f64 / pw.max(1.0);
-        let rgb = ocr::RgbImage::from_rgba(img.width as usize, img.height as usize, &img.rgba);
+        let mut rgb = ocr::RgbImage::from_rgba(img.width as usize, img.height as usize, &img.rgba);
+        if keep_text {
+            // 原有文字的位置塗白，不重複辨識；頁面上只剩原有文字時（一般 PDF）直接略過。
+            // 只看「有沒有文字」不夠：CAD 圖面、掃描檔常帶一行頁尾或浮水印文字（例如 pdfFactory 的試用版字樣）
+            let text = doc.page_text(page);
+            let all: Vec<usize> = (0..text.glyphs.len()).collect();
+            for r in text.glyph_rects(&all) {
+                mask(&mut rgb, r.map(|v| v as f64 * real), 1.5 * real);
+            }
+            if ink_ratio(&rgb) < 0.0005 {
+                set(format!("第 {} 頁只有原有的文字，略過", page + 1));
+                progress.store(i + 1, Ordering::Relaxed);
+                continue;
+            }
+        }
         let lines = eng.recognize(&rgb, cancel)?;
         let to_pt = |p: [f32; 2]| Pt::new(p[0] as f64 / real, p[1] as f64 / real);
         let lines: Vec<OcrTextLine> = lines
@@ -592,4 +605,21 @@ fn run_ocr(
         progress.store(i + 1, Ordering::Relaxed);
     }
     Ok(out)
+}
+
+/// 把影像中的矩形（像素座標，四周加 `pad`）塗白
+fn mask(img: &mut ocr::RgbImage, r: [f64; 4], pad: f64) {
+    let clamp = |v: f64, max: usize| (v.max(0.0) as usize).min(max);
+    let (x0, x1) = (clamp(r[0].min(r[2]) - pad, img.width), clamp(r[0].max(r[2]) + pad + 1.0, img.width));
+    let (y0, y1) = (clamp(r[1].min(r[3]) - pad, img.height), clamp(r[1].max(r[3]) + pad + 1.0, img.height));
+    for y in y0..y1 {
+        let row = y * img.width * 3;
+        img.rgb[row + x0 * 3..row + x1 * 3].fill(255);
+    }
+}
+
+/// 深色像素的比例（判斷頁面上是否還有需要辨識的內容）
+fn ink_ratio(img: &ocr::RgbImage) -> f64 {
+    let dark = img.rgb.chunks_exact(3).filter(|p| (p[0] as u32 * 3 + p[1] as u32 * 6 + p[2] as u32) < 1600).count();
+    dark as f64 / (img.width * img.height).max(1) as f64
 }
