@@ -252,12 +252,24 @@ pub fn agent() -> ureq::Agent {
     ureq::Agent::config_builder().tls_config(tls).user_agent("SimplePdfEditor").build().into()
 }
 
+/// 連線錯誤轉成使用者看得懂的說明
+fn http_error(e: &ureq::Error, what: &str) -> String {
+    match e {
+        ureq::Error::StatusCode(404) => format!("{what}：伺服器上找不到檔案（HTTP 404），語言包可能尚未發布或網址已變更。可改用「從檔案加入」。"),
+        ureq::Error::StatusCode(code) => format!("{what}：伺服器回應錯誤（HTTP {code}），請稍後再試。"),
+        ureq::Error::Io(_) | ureq::Error::HostNotFound | ureq::Error::ConnectionFailed | ureq::Error::Timeout(_) => {
+            format!("{what}：無法連線（{e}）。請確認網路連線與 Proxy 設定，或改用「從檔案加入」。")
+        }
+        _ => format!("{what}：{e}"),
+    }
+}
+
 /// 下載進度回呼：(已下載, 總大小)；回傳 false 表示取消
 pub type Progress<'a> = &'a mut dyn FnMut(u64, u64) -> bool;
 
 /// 下載檔案到指定路徑（邊下載邊計算 SHA-256，最後比對）
 pub fn download(url: &str, dest: &Path, sha256: &str, size: u64, progress: Progress<'_>) -> Result<(), String> {
-    let resp = agent().get(url).call().map_err(|e| format!("下載失敗：{e}"))?;
+    let resp = agent().get(url).call().map_err(|e| http_error(&e, "下載失敗"))?;
     let mut reader = resp.into_body().into_reader();
     let mut out = std::fs::File::create(dest).map_err(|e| e.to_string())?;
     let mut h = Sha256::new();
@@ -299,7 +311,7 @@ pub fn download_and_install(info: &PackInfo, progress: Progress<'_>) -> Result<P
 
 /// 取得最新的語言包清單
 pub fn fetch_manifest() -> Result<Manifest, String> {
-    let resp = agent().get(MANIFEST_URL).call().map_err(|e| format!("無法取得語言包清單：{e}"))?;
+    let resp = agent().get(MANIFEST_URL).call().map_err(|e| http_error(&e, "無法取得語言包清單"))?;
     let text = resp.into_body().read_to_string().map_err(|e| e.to_string())?;
     parse_manifest(&text)
 }

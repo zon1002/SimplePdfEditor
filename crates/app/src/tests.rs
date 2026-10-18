@@ -590,3 +590,27 @@ fn screenshot_ocr() {
     h.run_steps(4);
     shot(&mut h, "packs");
 }
+
+#[test]
+#[ignore]
+fn screenshot_pack_download_failure() {
+    // 沒有任何語言包（與剛安裝、未勾選 OCR 相同），下載目前會得到伺服器的回應
+    // SAFETY: 只在讀取語言包之前設定
+    unsafe { std::env::set_var("SPE_OCR_PACKS", format!("{}/../../target/no-packs", env!("CARGO_MANIFEST_DIR"))) };
+    let mut h = harness(opened());
+    crate::setup_fonts(&h.ctx);
+    h.run();
+    h.state_mut().open_pack_manager();
+    h.run_steps(4);
+    h.get_by_label_contains("下載（7.9 MB）").click();
+    h.step();
+    h.step();
+    let t = std::time::Instant::now();
+    while h.state().packs_ui.downloading() && t.elapsed().as_secs() < 60 {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        h.step();
+    }
+    h.run_steps(4);
+    let img = h.render().expect("render");
+    img.save(format!("{}/../../target/ui-ocr-download-error.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
+}

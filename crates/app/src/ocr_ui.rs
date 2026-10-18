@@ -62,6 +62,8 @@ pub struct PackManager {
     importing: Option<std::thread::JoinHandle<Result<PackInfo, String>>>,
     download: Option<PackDownload>,
     message: Option<String>,
+    /// 最近一次失敗：(語言包 id，空字串表示整體), 說明
+    error: Option<(String, String)>,
     loaded: bool,
 }
 
@@ -70,6 +72,10 @@ fn mb(bytes: u64) -> String {
 }
 
 impl PackManager {
+    pub fn downloading(&self) -> bool {
+        self.download.is_some()
+    }
+
     fn refresh(&mut self) {
         self.installed = packs::installed();
         self.loaded = true;
@@ -308,6 +314,7 @@ impl App {
         if !pm.loaded {
             pm.refresh();
         }
+        let mut popup: Option<String> = None;
         // 背景工作完成
         if pm.fetching.as_ref().is_some_and(|h| h.is_finished()) {
             match pm.fetching.take().map(|h| h.join().unwrap_or_else(|_| Err("取得清單失敗".into()))) {
@@ -315,25 +322,40 @@ impl App {
                     pm.remote = Some(m);
                     pm.message = Some("已取得最新的語言包清單".into());
                 }
-                Some(Err(e)) => pm.message = Some(e),
+                Some(Err(e)) => {
+                    pm.message = None;
+                    pm.error = Some((String::new(), e));
+                }
                 None => {}
             }
         }
         if pm.importing.as_ref().is_some_and(|h| h.is_finished()) {
             match pm.importing.take().map(|h| h.join().unwrap_or_else(|_| Err("加入失敗".into()))) {
                 Some(Ok(info)) => pm.message = Some(format!("已加入：{}", info.name)),
-                Some(Err(e)) => pm.message = Some(format!("加入失敗：{e}")),
+                Some(Err(e)) => {
+                    pm.message = None;
+                    pm.error = Some((String::new(), format!("加入失敗：{e}")));
+                    popup = Some(format!("加入 OCR 語言包失敗：
+{e}"));
+                }
                 None => {}
             }
             pm.refresh();
         }
         if let Some(dl) = pm.download.as_mut() {
             if dl.handle.as_ref().is_some_and(|h| h.is_finished()) {
-                let r = dl.handle.take().map(|h| h.join().unwrap_or_else(|_| Err("下載失敗".into())));
+                let r = dl.handle.take().map(|h| h.join().unwrap_or_else(|_| Err("下載時發生錯誤".into())));
+                let id = dl.id.clone();
                 pm.download = None;
                 match r {
                     Some(Ok(info)) => pm.message = Some(format!("已安裝：{}", info.name)),
-                    Some(Err(e)) => pm.message = Some(e),
+                    Some(Err(e)) if e == "已取消下載" => pm.message = Some(e),
+                    Some(Err(e)) => {
+                        pm.message = None;
+                        popup = Some(format!("OCR 語言包下載失敗：
+{e}"));
+                        pm.error = Some((id, e));
+                    }
                     None => {}
                 }
                 pm.refresh();
@@ -389,6 +411,9 @@ impl App {
                             });
                         });
                         ui.label(RichText::new(format!("{}（安裝後 {}）", info.description, mb(info.total_size()))).color(ui.visuals().weak_text_color()));
+                        if let Some((_, e)) = pm.error.as_ref().filter(|(id, _)| *id == info.id) {
+                            ui.colored_label(ui.visuals().error_fg_color, format!("⚠ {e}"));
+                        }
                         if let Some(dl) = pm.download.as_ref().filter(|d| d.id == info.id) {
                             ui.horizontal(|ui| {
                                 let done = dl.done.load(Ordering::Relaxed);
@@ -401,6 +426,9 @@ impl App {
                     });
                 }
             });
+            if let Some((_, e)) = pm.error.as_ref().filter(|(id, _)| id.is_empty()) {
+                ui.colored_label(ui.visuals().error_fg_color, e);
+            }
             if let Some(m) = &pm.message {
                 ui.label(m.as_str());
             }
@@ -420,11 +448,13 @@ impl App {
         pm.open = open;
         if fetch {
             pm.message = Some("正在取得語言包清單…".into());
+            pm.error = None;
             pm.fetching = Some(std::thread::spawn(packs::fetch_manifest));
         }
         if import {
             if let Some(path) = rfd::FileDialog::new().set_title("加入 OCR 語言包").add_filter("OCR 語言包", &["zip"]).pick_file() {
                 pm.message = Some("正在驗證並加入語言包…".into());
+                pm.error = None;
                 pm.importing = Some(std::thread::spawn(move || packs::install_zip(&path, None)));
             }
         }
@@ -439,20 +469,37 @@ impl App {
             let done = Arc::new(AtomicU64::new(0));
             let cancel = Arc::new(AtomicBool::new(false));
             let (d2, c2) = (done.clone(), cancel.clone());
-            let total = info.zip_size;
+            // 還沒有辨識引擎時一起下載（語言包都需要它）
+            let engine = (info.kind != PackKind::Engine && !pm.installed.iter().any(|p| p.info.kind == PackKind::Engine))
+                .then(|| catalog.iter().find(|p| p.kind == PackKind::Engine).cloned())
+                .flatten();
+            let total = info.zip_size + engine.as_ref().map_or(0, |e| e.zip_size);
             let id = info.id.clone();
             let handle = std::thread::spawn(move || {
+                let mut base = 0;
+                if let Some(e) = &engine {
+                    let mut progress = |n: u64, _: u64| {
+                        d2.store(n, Ordering::Relaxed);
+                        !c2.load(Ordering::Relaxed)
+                    };
+                    packs::download_and_install(e, &mut progress).map_err(|err| format!("{}：{err}", e.name))?;
+                    base = e.zip_size;
+                }
                 let mut progress = |n: u64, _: u64| {
-                    d2.store(n, Ordering::Relaxed);
+                    d2.store(base + n, Ordering::Relaxed);
                     !c2.load(Ordering::Relaxed)
                 };
                 packs::download_and_install(&info, &mut progress)
             });
             pm.message = None;
+            pm.error = None;
             pm.download = Some(PackDownload { id, done, total, cancel, handle: Some(handle) });
         }
         if pm.fetching.is_some() || pm.download.is_some() || pm.importing.is_some() {
             ctx.request_repaint_after(std::time::Duration::from_millis(200));
+        }
+        if let Some(e) = popup {
+            self.error_box(e);
         }
     }
 }
