@@ -534,13 +534,22 @@ impl App {
 
         // 檢視模式不處理任何編輯操作
         let editing = self.editing;
-        if editing && pressed && resp.hovered() && self.dialog.is_none() {
+        if pressed && resp.hovered() && self.dialog.is_none() {
             if let Some(p) = pos {
                 let pt = mp.to_page(p);
-                self.on_press(pt, page_bounds.contains(pt), mods.command);
+                if editing {
+                    self.on_press(pt, page_bounds.contains(pt), mods.command);
+                } else {
+                    // 檢視模式：只能拖曳選取框（複製文字與圖片，不改動內容）
+                    self.region = None;
+                    if page_bounds.contains(pt) {
+                        self.drag = Drag::Marquee { start: pt, cur: pt };
+                    }
+                }
             }
         }
-        if editing && down {
+        let marquee = matches!(self.drag, Drag::Marquee { .. });
+        if (editing || marquee) && down {
             if let Some(p) = pos {
                 let pt = mp.to_page(p);
                 self.on_move(clamp(pt), pt, mods.shift);
@@ -554,9 +563,31 @@ impl App {
                 }
             }
         }
-        if editing && released {
+        if (editing || marquee) && released {
             let pt = pos.map(|p| mp.to_page(p));
             self.on_release(pt.map(clamp), mods.shift);
+        }
+
+        if self.region.is_some() {
+            resp.context_menu(|ui| {
+                if ui.button("複製（文字與圖片）　Ctrl+C").clicked() {
+                    self.copy_region(crate::copy::CopyWhat::Both);
+                    ui.close();
+                }
+                if ui.button("複製文字").clicked() {
+                    self.copy_region(crate::copy::CopyWhat::Text);
+                    ui.close();
+                }
+                if ui.button("複製為圖片").clicked() {
+                    self.copy_region(crate::copy::CopyWhat::Image);
+                    ui.close();
+                }
+                ui.separator();
+                if ui.button("取消選取").clicked() {
+                    self.clear_region();
+                    ui.close();
+                }
+            });
         }
 
         // ---- 游標 ----
@@ -628,6 +659,13 @@ impl App {
                 painter.rect(rect, 1.0, Color32::WHITE, Stroke::new(1.0, SELECT_BLUE), StrokeKind::Inside);
             }
         }
+        // 選取框與框內選到的文字
+        if let Some(r) = self.region.as_ref().filter(|r| r.page == page) {
+            paint_quads(&painter, &mp, &r.quads, Pt::default(), Color32::from_rgba_unmultiplied(0x33, 0x99, 0xFF, 70));
+            let rect = mp.rect(&r.rect);
+            painter.rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0x33, 0x99, 0xFF, 18));
+            dashed_rect(&painter, rect, SELECT_BLUE);
+        }
         // 拖曳中的預覽
         match &self.drag {
             Drag::Selecting { quads, .. } => {
@@ -646,6 +684,7 @@ impl App {
     }
 
     fn on_press(&mut self, pt: Pt, on_page: bool, ctrl: bool) {
+        self.region = None;
         match self.tool {
             Tool::Select => {
                 if let Some((index, handle)) = self.handle_at(pt) {
@@ -675,6 +714,9 @@ impl App {
                     None => {
                         if !ctrl {
                             self.set_selection(Vec::new());
+                        }
+                        if on_page {
+                            self.drag = Drag::Marquee { start: pt, cur: pt };
                         }
                     }
                 }
@@ -735,6 +777,11 @@ impl App {
                     }
                 }
             }
+            Drag::Marquee { start, cur: c } => {
+                *c = cur;
+                let start = *start;
+                self.region = self.region_from(start, cur);
+            }
             Drag::Drawing { start, cur: c } => {
                 *c = match (shift, self.tool.is_shape()) {
                     (true, true) => constrain_square(*start, cur),
@@ -749,6 +796,38 @@ impl App {
     fn on_release(&mut self, pt: Option<Pt>, shift: bool) {
         let drag = std::mem::replace(&mut self.drag, Drag::None);
         match drag {
+            Drag::Marquee { start, cur } => {
+                let end = pt.unwrap_or(cur);
+                let r = pdfcore::Rect::from_points(start, end);
+                if r.width() < 3.0 || r.height() < 3.0 {
+                    // 只是點一下：取消選取框
+                    self.region = None;
+                    return;
+                }
+                self.region = self.region_from(start, end);
+                // 編輯模式：完全在框內的註記一併選取（可移動、刪除）
+                if self.editing {
+                    let page = self.page;
+                    let sel: Vec<usize> = self
+                        .model
+                        .marks
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, m)| m.page == page && m.kind != MarkType::Ocr)
+                        .filter(|(_, m)| {
+                            let b = mark_bounds(m).translate(m.offset);
+                            b.x0 >= r.x0 && b.y0 >= r.y0 && b.x1 <= r.x1 && b.y1 <= r.y1
+                        })
+                        .map(|(i, _)| i)
+                        .collect();
+                    self.set_selection(sel);
+                }
+                let n = self.region.as_ref().map_or(0, |r| r.text.chars().filter(|c| !c.is_whitespace()).count());
+                self.message(
+                    if n > 0 { format!("已選取 {n} 個字（Ctrl+C 複製）") } else { "已選取範圍（Ctrl+C 複製為圖片）".to_string() },
+                    5.0,
+                );
+            }
             Drag::Resizing { before, moved, .. } => {
                 if moved {
                     self.model.record(before);

@@ -668,4 +668,94 @@ fn page_with_footer_text_is_still_recognized_without_duplicating_it() {
     let hl: Vec<_> = h.state().model.marks.iter().filter(|m| m.kind == MarkType::Highlight).collect();
     assert_eq!(hl.len(), 1, "應加上一個高亮");
     assert!(h.state().last_text.contains("quick brown fox"), "高亮應選到辨識出的文字：{:?}", h.state().last_text);
+
+    // 選取工具拖曳選取框：選到辨識出的文字，可複製
+    h.state_mut().set_tool(Tool::Select);
+    drag(&mut h, Pt::new(40.0, 40.0), Pt::new(500.0, 130.0), false);
+    let r = h.state().region.clone().expect("應有選取框");
+    assert!(r.text.contains("quick brown fox") && r.text.contains("中文測試"), "{}", r.text);
+}
+
+// ---------------------------------------------------------------- 選取框：複製文字與圖片
+
+fn clipboard() -> Option<(Option<String>, Option<(u32, u32)>)> {
+    crate::clipboard::LAST.with(|l| l.borrow_mut().take())
+}
+
+/// Windows 上的 Ctrl+C（eframe 送出的是 Event::Copy，不是按鍵事件）
+fn ctrl_c(h: &mut Harness<'static, App>) {
+    h.event(egui::Event::Copy);
+    h.run();
+}
+
+#[test]
+fn view_mode_marquee_selects_text_and_copies_text_and_image() {
+    let mut h = harness(opened());
+    h.run();
+    assert!(!h.state().editing);
+    // 第一行文字（Page 1: The quick brown fox…）
+    drag(&mut h, Pt::new(60.0, 45.0), Pt::new(450.0, 85.0), false);
+    let r = h.state().region.clone().expect("檢視模式也能拖曳選取框");
+    assert!(r.text.contains("quick brown fox"), "{}", r.text);
+    assert!(!r.text.contains("中文測試"), "框外的行不應選到：{}", r.text);
+    assert!(!r.quads.is_empty());
+    assert!(h.state().model.marks.is_empty() && !h.state().model.dirty, "選取不改動文件");
+
+    clipboard();
+    ctrl_c(&mut h);
+    let (text, image) = clipboard().expect("Ctrl+C 應複製");
+    assert!(text.unwrap().contains("quick brown fox"));
+    let (w, hh) = image.expect("應同時複製圖片");
+    // 300 dpi：390 × 40 pt ≈ 1625 × 167 像素
+    assert!((1600..1650).contains(&w) && (160..175).contains(&hh), "{w}×{hh}");
+
+    // 右鍵選單的「只複製文字」「只複製圖片」
+    h.state_mut().copy_region(crate::copy::CopyWhat::Text);
+    assert!(matches!(clipboard(), Some((Some(_), None))));
+    h.state_mut().copy_region(crate::copy::CopyWhat::Image);
+    assert!(matches!(clipboard(), Some((None, Some(_)))));
+
+    // 點一下（不拖曳）取消選取框
+    drag(&mut h, Pt::new(300.0, 300.0), Pt::new(300.5, 300.5), false);
+    assert!(h.state().region.is_none());
+}
+
+#[test]
+fn copied_image_contains_page_content() {
+    let mut h = harness(opened());
+    h.run();
+    drag(&mut h, Pt::new(60.0, 45.0), Pt::new(450.0, 85.0), false);
+    let img = h.state().region_image().expect("image");
+    let dark = img.rgba.chunks_exact(4).filter(|p| p[0] < 100).count();
+    assert!(dark > 1000, "圖片應有文字的深色像素：{dark}");
+    // DIB：標頭 40 位元組 + 每列補齊 4 位元組
+    let dib = crate::clipboard::dib(&img);
+    assert_eq!(dib.len(), 40 + (img.width as usize * 3).div_ceil(4) * 4 * img.height as usize);
+    assert!(crate::clipboard::png(&img).is_some_and(|p| p.starts_with(&[0x89, b'P', b'N', b'G'])));
+}
+
+#[test]
+fn select_tool_marquee_in_edit_mode_also_selects_marks_inside() {
+    let mut h = editing_harness();
+    h.state_mut().add_mark(line_mark()); // (72,400)–(300,400)
+    h.state_mut().set_tool(Tool::Select);
+    h.run();
+    drag(&mut h, Pt::new(50.0, 380.0), Pt::new(320.0, 420.0), false);
+    assert_eq!(h.state().selection, vec![0], "完全在框內的註記應一併選取");
+    assert!(h.state().region.is_some());
+    // 在框外按下：開始新的選取，舊的選取框消失
+    drag(&mut h, Pt::new(400.0, 300.0), Pt::new(400.5, 300.5), false);
+    assert!(h.state().region.is_none() && h.state().selection.is_empty(), "region {:?} sel {:?} zoom {} origin {:?}", h.state().region.as_ref().map(|r| r.rect), h.state().selection, h.state().zoom, h.state().page_origin);
+}
+
+/// 實際寫入 Windows 剪貼簿（會覆蓋目前剪貼簿內容，手動執行）
+#[test]
+#[ignore]
+fn system_clipboard_text_and_image() {
+    let mut h = harness(opened());
+    h.run();
+    drag(&mut h, Pt::new(60.0, 45.0), Pt::new(450.0, 85.0), false);
+    let r = h.state().region.clone().unwrap();
+    let img = h.state().region_image().unwrap();
+    crate::clipboard::set_system(Some(r.text.trim()), Some(&img)).expect("剪貼簿");
 }

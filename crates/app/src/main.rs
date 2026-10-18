@@ -11,6 +11,8 @@
 
 mod app;
 mod bars;
+mod clipboard;
+mod copy;
 mod dialogs;
 mod help;
 mod icons;

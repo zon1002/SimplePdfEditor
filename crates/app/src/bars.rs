@@ -49,6 +49,8 @@ enum Act {
     Redo,
     Delete,
     Copy,
+    CopyText,
+    CopyImage,
     Prev,
     Next,
     ZoomIn,
@@ -147,7 +149,9 @@ impl App {
             Act::Undo => self.undo(),
             Act::Redo => self.redo(),
             Act::Delete if open => self.delete_selected(),
-            Act::Copy if open => self.copy_text(ctx),
+            Act::Copy if open => self.copy(ctx),
+            Act::CopyText if open => self.copy_region(crate::copy::CopyWhat::Text),
+            Act::CopyImage if open => self.copy_region(crate::copy::CopyWhat::Image),
             Act::Prev if open => self.go_to_page(self.page.saturating_sub(1)),
             Act::Next if open => self.go_to_page(self.page + 1),
             Act::ZoomIn if open => self.set_zoom(self.zoom * 1.2),
@@ -215,6 +219,14 @@ impl App {
                     todo.push(*a);
                 }
             }
+            // Windows 上 Ctrl+C 由 eframe 轉成 Event::Copy（不會有按鍵事件）
+            if !typing {
+                let before = i.events.len();
+                i.events.retain(|e| !matches!(e, egui::Event::Copy));
+                if i.events.len() != before && !todo.contains(&Act::Copy) {
+                    todo.push(Act::Copy);
+                }
+            }
             if !typing {
                 for t in Tool::ALL {
                     if i.consume_key(Modifiers::NONE, t.key()) {
@@ -260,7 +272,10 @@ impl App {
                 item(ui, "取消復原", "Ctrl+Y", editing && !self.model.redo_stack.is_empty(), Act::Redo, &mut todo);
                 ui.separator();
                 item(ui, "刪除選取的註記", "Delete", editing, Act::Delete, &mut todo);
-                item(ui, "複製最後選取的文字", "Ctrl+C", open, Act::Copy, &mut todo);
+                let region = self.region.is_some();
+                item(ui, if region { "複製（文字與圖片）" } else { "複製最後選取的文字" }, "Ctrl+C", open, Act::Copy, &mut todo);
+                item(ui, "複製選取框的文字", "", region, Act::CopyText, &mut todo);
+                item(ui, "複製選取框為圖片", "", region, Act::CopyImage, &mut todo);
             });
             ui.menu_button("檢視(V)", |ui| {
                 item(ui, "放大", "Ctrl++", open, Act::ZoomIn, &mut todo);
@@ -589,7 +604,7 @@ impl App {
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let hint = if !self.is_open() || self.editing { self.tool.hint() } else { "檢視模式：按「編輯」開始加入註記" };
+                let hint = if !self.is_open() || self.editing { self.tool.hint() } else { "檢視模式：拖曳出選取框可複製文字與圖片（Ctrl+C）；按「編輯」開始加入註記" };
                 ui.label(RichText::new(hint).color(ui.visuals().weak_text_color()));
                 ui.add_space(12.0);
                 let coord = match self.cursor_pt {

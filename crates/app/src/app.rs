@@ -101,7 +101,7 @@ impl Tool {
     }
     pub fn hint(self) -> &'static str {
         match self {
-            Tool::Select => "選取：點選註記可拖曳移動、Delete 刪除；雙擊文字可編輯",
+            Tool::Select => "選取：在空白處拖曳出選取框，Ctrl+C 複製框內的文字與圖片；點選註記可拖曳移動、Delete 刪除；雙擊文字可編輯",
             Tool::Highlight => "高亮：拖曳選取文字即加上螢光標記（無文字層時以矩形標記）",
             Tool::Underline => "底線：拖曳選取文字即加上底線",
             Tool::Text => "文字：在頁面上點一下輸入文字；點既有文字可修改",
@@ -186,6 +186,8 @@ pub enum Drag {
     Drawing { start: Pt, cur: Pt },
     /// 文字工具：按下後等放開再開啟對話框
     TextClick { at: Pt },
+    /// 選取工具（或檢視模式）在空白處拖曳：選取框，選取框內的文字與圖片
+    Marquee { start: Pt, cur: Pt },
     /// 選取工具：拖曳框的控制點調整大小（handle：0 左上、1 上、2 右上、3 右、4 右下、5 下、6 左下、7 左）
     Resizing { index: usize, handle: u8, before: MarkList, moved: bool },
 }
@@ -250,6 +252,8 @@ pub struct App {
     pub packs_ui: crate::ocr_ui::PackManager,
     /// 目前頁可選取的文字（原有文字＋OCR 結果），鍵為 (頁, marks_gen)
     pub select_cache: Option<((usize, u64), std::rc::Rc<pdfcore::text::PageText>)>,
+    /// 選取框（可複製文字與圖片）
+    pub region: Option<crate::copy::Region>,
     pub hwnd: isize,
     /// 連續調整同一屬性時合併成一次復原
     pub coalesce: Option<(&'static str, f64)>,
@@ -299,6 +303,7 @@ impl App {
             ocr_job: None,
             packs_ui: Default::default(),
             select_cache: None,
+            region: None,
             hwnd,
             coalesce: None,
             allow_close: false,
@@ -378,6 +383,7 @@ impl App {
                 self.model.reset();
                 self.touch();
                 self.selection.clear();
+                self.region = None;
                 self.drag = Drag::None;
                 self.page = 0;
                 self.base_img = None;
@@ -432,6 +438,7 @@ impl App {
         if page != self.page {
             self.page = page;
             self.selection.clear();
+            self.region = None;
             self.drag = Drag::None;
             self.scroll_to_top = true;
         }
