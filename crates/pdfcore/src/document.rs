@@ -210,20 +210,20 @@ impl Document {
     }
 }
 
-/// OCR 結果（尚未存檔）轉成可選取的頁面文字
-pub fn ocr_page_text(lines: &[crate::marks::OcrTextLine], offset: Pt) -> PageText {
-    crate::text::layout(ocr_glyphs(lines, offset))
+/// OCR 結果（尚未存檔）轉成可選取的頁面文字；`size` 為頁面大小（檢視座標），直書文字依此排列
+pub fn ocr_page_text(lines: &[crate::marks::OcrTextLine], offset: Pt, size: (f64, f64)) -> PageText {
+    crate::text::layout_on_page(ocr_glyphs(lines, offset), size.0 as f32, size.1 as f32)
 }
 
 /// 頁面原有的文字加上 OCR 結果，合併成一份可選取的文字（依閱讀順序重新排列）。
 /// 掃描檔、CAD 圖面常帶有頁尾或浮水印文字，兩者都要能選取。
-pub fn merge_ocr_text(existing: &PageText, lines: &[crate::marks::OcrTextLine], offset: Pt) -> PageText {
+pub fn merge_ocr_text(existing: &PageText, lines: &[crate::marks::OcrTextLine], offset: Pt, size: (f64, f64)) -> PageText {
     if lines.is_empty() {
         return existing.clone();
     }
     let mut glyphs = existing.glyphs.clone();
     glyphs.extend(ocr_glyphs(lines, offset));
-    crate::text::layout(glyphs)
+    crate::text::layout_on_page(glyphs, size.0 as f32, size.1 as f32)
 }
 
 fn ocr_glyphs(lines: &[crate::marks::OcrTextLine], offset: Pt) -> Vec<crate::text::TextGlyph> {
@@ -261,11 +261,8 @@ pub fn select_in(t: &PageText, a: Pt, b: Pt) -> (Vec<Quad>, String) {
         };
         let (lo, hi) = if ia <= ib { (ia, ib) } else { (ib, ia) };
         let range = lo..hi + 1;
-        let quads = t
-            .line_rects(range.clone())
-            .into_iter()
-            .map(|r| Rect::new(r[0] as f64, r[1] as f64, r[2] as f64, r[3] as f64).corners())
-            .collect();
+        // 每行一個沿著書寫方向的四邊形：直書、旋轉的文字，底線也沿著文字畫
+        let quads = t.line_quads(range.clone()).into_iter().map(|q| q.map(|p| Pt::new(p[0] as f64, p[1] as f64))).collect();
         (quads, t.text_of(range))
     }
 }

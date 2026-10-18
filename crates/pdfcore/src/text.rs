@@ -254,6 +254,58 @@ impl PageText {
         self.merged_rects(glyphs.iter().copied())
     }
 
+    /// Like [`Self::line_rects`], but each run becomes a quad aligned with its writing direction
+    /// (ul, ur, lr, ll relative to the text): vertical or rotated text gets a quad along the line,
+    /// so an underline drawn on its bottom edge follows the text instead of crossing it.
+    pub fn line_quads(&self, range: std::ops::Range<usize>) -> Vec<[[f32; 2]; 4]> {
+        self.merged_quads(range)
+    }
+
+    /// [`Self::glyph_rects`] as quads aligned with the writing direction.
+    pub fn glyph_quads(&self, glyphs: &[usize]) -> Vec<[[f32; 2]; 4]> {
+        self.merged_quads(glyphs.iter().copied())
+    }
+
+    fn merged_quads(&self, glyphs: impl IntoIterator<Item = usize>) -> Vec<[[f32; 2]; 4]> {
+        // Runs of consecutive glyphs on one line, as in `merged_rects`.
+        let mut runs: Vec<(u32, usize, Vec<usize>)> = Vec::new();
+        for i in glyphs {
+            let (Some(_), Some(&line)) = (self.glyphs.get(i), self.line_of.get(i)) else { break };
+            match runs.last_mut() {
+                Some((l, last, run)) if *l == line && last.checked_add(1) == Some(i) => {
+                    *last = i;
+                    run.push(i);
+                }
+                _ => runs.push((line, i, vec![i])),
+            }
+        }
+        runs.into_iter()
+            .map(|(_, _, run)| {
+                let g0 = &self.glyphs[run[0]];
+                let d = g0.direction;
+                let len = (d[0] * d[0] + d[1] * d[1]).sqrt();
+                let d = if len > 1e-6 { [d[0] / len, d[1] / len] } else { [1.0, 0.0] };
+                // Towards the top of the glyphs: perpendicular to the writing direction, on the side
+                // of the glyph's top edge.
+                let mut u = [-d[1], d[0]];
+                let up = [g0.quad[3][0] - g0.quad[0][0], g0.quad[3][1] - g0.quad[0][1]];
+                if u[0] * up[0] + u[1] * up[1] < 0.0 {
+                    u = [-u[0], -u[1]];
+                }
+                let (mut s0, mut s1, mut t0, mut t1) = (f32::MAX, f32::MIN, f32::MAX, f32::MIN);
+                for &i in &run {
+                    for p in &self.glyphs[i].quad {
+                        let s = p[0] * d[0] + p[1] * d[1];
+                        let t = p[0] * u[0] + p[1] * u[1];
+                        (s0, s1, t0, t1) = (s0.min(s), s1.max(s), t0.min(t), t1.max(t));
+                    }
+                }
+                let at = |s: f32, t: f32| [d[0] * s + u[0] * t, d[1] * s + u[1] * t];
+                [at(s0, t1), at(s1, t1), at(s1, t0), at(s0, t0)]
+            })
+            .collect()
+    }
+
     fn merged_rects(&self, glyphs: impl IntoIterator<Item = usize>) -> Vec<[f32; 4]> {
         let mut out: Vec<(u32, usize, [f32; 4])> = Vec::new();
         for i in glyphs {
@@ -670,7 +722,33 @@ pub fn extract_page(pdf: &Pdf, page: usize, settings: &InterpreterSettings) -> O
     interpret_page(p, &mut ctx, &mut dev);
     // A replacement the content never closed ends with the page.
     dev.finish();
-    let glyphs = dev.glyphs;
+    Some(layout_drawn(dev.glyphs, w, h))
+}
+
+/// Lay out glyphs of a page `w` × `h` (view space) that are not from its content stream (OCR
+/// results, possibly merged with the page's own text): grouped by writing direction like
+/// [`extract_page`], so vertical columns read top to bottom as one line each.
+pub fn layout_on_page(glyphs: Vec<TextGlyph>, w: f32, h: f32) -> PageText {
+    let drawn = glyphs
+        .into_iter()
+        .map(|g| {
+            let (dx, dy) = (g.direction[0] as f64, g.direction[1] as f64);
+            let len = dx.hypot(dy);
+            let u = if len.is_finite() && len > 0.0 { [dx / len, dy / len] } else { [1.0, 0.0] };
+            let quarter = if u[0].abs() >= u[1].abs() {
+                if u[0] >= 0.0 { 0 } else { 2 }
+            } else if u[1] > 0.0 {
+                1
+            } else {
+                3
+            };
+            (quarter, u, g)
+        })
+        .collect();
+    layout_drawn(drawn, w, h)
+}
+
+fn layout_drawn(glyphs: Vec<Drawn>, w: f32, h: f32) -> PageText {
     // Text on a curved path: glyphs that each continue the previous one's line while the
     // direction turns. Each such run is one line.
     let turned = |u: [f64; 2]| u[0].abs().min(u[1].abs()) > DIRECTION_TOLERANCE;
@@ -784,7 +862,7 @@ pub fn extract_page(pdf: &Pdf, page: usize, settings: &InterpreterSettings) -> O
     for f in extra {
         emit(&mut text, &f.ids, &f.line_of, &f.space_before, None);
     }
-    Some(text)
+    text
 }
 
 /// Glyphs in reading order, as indices into the page's glyphs, with their lines and word gaps.

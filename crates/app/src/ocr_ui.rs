@@ -538,7 +538,7 @@ pub fn selectable_text(doc: &pdfcore::Document, marks: &[Mark], page: usize) -> 
     if lines.is_empty() {
         return existing;
     }
-    std::rc::Rc::new(pdfcore::document::merge_ocr_text(&existing, &lines, Pt::default()))
+    std::rc::Rc::new(pdfcore::document::merge_ocr_text(&existing, &lines, Pt::default(), doc.page_size(page)))
 }
 
 /// 依拖曳起訖點選取頁面文字（含 OCR 結果）

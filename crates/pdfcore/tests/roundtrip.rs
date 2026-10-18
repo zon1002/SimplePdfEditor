@@ -117,7 +117,7 @@ fn ocr_layer_is_invisible_searchable_text() {
     let m = Mark { kind: MarkType::Ocr, page: 0, ocr: vec![OcrTextLine { text: text.into(), confidence: 0.99, glyphs }], ..Default::default() };
 
     // 存檔前：OCR 結果可選取
-    let pt = pdfcore::document::ocr_page_text(&m.ocr, Pt::default());
+    let pt = pdfcore::document::ocr_page_text(&m.ocr, Pt::default(), (612.0, 792.0));
     let (quads, sel) = pdfcore::document::select_in(&pt, Pt::new(101.0, 510.0), Pt::new(279.0, 510.0));
     assert_eq!(sel, text);
     assert_eq!(quads.len(), 1);
@@ -141,4 +141,35 @@ fn ocr_layer_is_invisible_searchable_text() {
     assert!((r.x0 - 100.0).abs() < 0.5 && (r.x1 - 280.0).abs() < 0.5, "{r:?}");
     assert!((r.y0 - 500.0).abs() < 0.5 && (r.y1 - 520.0).abs() < 0.5, "{r:?}");
     std::fs::write(format!("{}/../../target/ocr-layer.pdf", env!("CARGO_MANIFEST_DIR")), saved.bytes().as_slice()).unwrap();
+}
+
+/// 直書的 OCR 結果：一欄是一行（複製時沒有每字換行、不混入隔壁欄），
+/// 選取的四邊形沿著書寫方向，底線畫在整欄的一側而不是最後一個字底下
+#[test]
+fn vertical_ocr_column_selects_as_one_line_along_the_column() {
+    use pdfcore::{OcrGlyph, OcrTextLine, Pt};
+    // 由上往下書寫：四邊形 ul, ur, lr, ll 依文字方向（ul→ur 朝下，「上方」在右側）
+    let column = |text: &str, x: f64| {
+        let glyphs = text
+            .chars()
+            .enumerate()
+            .map(|(i, c)| {
+                let y = 100.0 + i as f64 * 20.0;
+                OcrGlyph { text: c.to_string(), quad: [Pt::new(x + 20.0, y), Pt::new(x + 20.0, y + 20.0), Pt::new(x, y + 20.0), Pt::new(x, y)] }
+            })
+            .collect();
+        OcrTextLine { text: text.into(), confidence: 0.99, glyphs }
+    };
+    let lines = vec![column("豐鈺北屯太原段", 100.0), column("店舖住宅新建工程", 75.0)];
+    let pt = pdfcore::document::ocr_page_text(&lines, Pt::default(), (612.0, 792.0));
+    // 第一欄由第一個字拖到最後一個字
+    let (quads, sel) = pdfcore::document::select_in(&pt, Pt::new(110.0, 110.0), Pt::new(110.0, 230.0));
+    assert_eq!(sel, "豐鈺北屯太原段");
+    assert_eq!(quads.len(), 1, "一欄一個四邊形");
+    let q = quads[0];
+    // 底邊（ll → lr）沿著整欄（x = 100 那一側，長 140）
+    assert!((q[3].x - 100.0).abs() < 0.5 && (q[2].x - 100.0).abs() < 0.5, "{q:?}");
+    assert!(((q[2].y - q[3].y).abs() - 140.0).abs() < 0.5, "{q:?}");
+    // 整頁：兩欄各一行，由右而左
+    assert_eq!(pt.plain_text(), "豐鈺北屯太原段\n店舖住宅新建工程");
 }

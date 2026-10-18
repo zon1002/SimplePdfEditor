@@ -36,7 +36,7 @@ impl App {
         let rect = Rect::from_points(a, b);
         let text = self.page_selectable_text()?;
         let glyphs = text.glyphs_in([rect.x0 as f32, rect.y0 as f32, rect.x1 as f32, rect.y1 as f32]);
-        let quads = text.glyph_rects(&glyphs).into_iter().map(|r| Rect::new(r[0] as f64, r[1] as f64, r[2] as f64, r[3] as f64).corners()).collect();
+        let quads = text.glyph_quads(&glyphs).into_iter().map(|q| q.map(|p| Pt::new(p[0] as f64, p[1] as f64))).collect();
         Some(Region { page: self.page, rect, text: text.column_text(&glyphs), quads })
     }
 
