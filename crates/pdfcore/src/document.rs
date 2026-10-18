@@ -5,7 +5,7 @@
 
 use crate::geom::{Affine, Pt, Quad, Rect};
 use crate::text::{PageText, extract_page};
-use hayro::hayro_interpret::InterpreterSettings;
+
 use hayro::hayro_syntax::Pdf;
 use hayro::hayro_syntax::LoadPdfError;
 use hayro::vello_cpu::color::palette::css::WHITE;
@@ -152,7 +152,7 @@ impl Document {
         let mut rgba = vec![0u8; pw as usize * ph as usize * 4];
         let ok = catch_unwind(AssertUnwindSafe(|| {
             let cache = RenderCache::new();
-            render_into(p, &cache, &InterpreterSettings::default(), &rs, &mut rgba);
+            render_into(p, &cache, &crate::cjkfonts::interpreter_settings(), &rs, &mut rgba);
         }));
         if ok.is_err() {
             // 渲染失敗時仍顯示白色頁面，避免整個程式無法使用
@@ -195,7 +195,7 @@ impl Document {
         if let Some(t) = self.text.borrow().get(&page) {
             return t.clone();
         }
-        let t = catch_unwind(AssertUnwindSafe(|| extract_page(&self.pdf, page, &InterpreterSettings::default())))
+        let t = catch_unwind(AssertUnwindSafe(|| extract_page(&self.pdf, page, &crate::cjkfonts::interpreter_settings())))
             .ok()
             .flatten()
             .unwrap_or_default();

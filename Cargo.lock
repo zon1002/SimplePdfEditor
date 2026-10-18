@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "SimplePdfEditor"
-version = "2.3.0"
+version = "2.3.1"
 dependencies = [
  "eframe",
  "egui",
@@ -2075,7 +2075,7 @@ dependencies = [
 
 [[package]]
 name = "pdfcore"
-version = "2.3.0"
+version = "2.3.1"
 dependencies = [
  "flate2",
  "getrandom 0.3.4",
@@ -2622,7 +2622,7 @@ dependencies = [
 
 [[package]]
 name = "shellext"
-version = "2.3.0"
+version = "2.3.1"
 dependencies = [
  "pdfcore",
  "windows",

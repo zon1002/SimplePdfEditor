@@ -1,6 +1,6 @@
 # 簡易 PDF 編輯器（SimplePdfEditor）— Rust 版
 
-Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.0）。
+Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.1）。
 由 C++17 / Qt6 / MuPDF 的 [v1.6.0](../SimplePdfEditor) 改寫，功能維持不變，架構參考 [PdfCraft](https://github.com/storytold/pdfcraft)
 （同為純 Rust 的 PDF 工具：使用相同的 hayro 渲染、lopdf 存檔與 egui 介面，並沿用其修補版本與文字擷取模組）。
 
@@ -9,12 +9,12 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.0）。
 
 ## 下載
 
-`dist/` 內為 v2.3.0 發行版：
+`dist/` 內為 v2.3.1 發行版：
 
 | 檔案 | 說明 |
 |------|------|
-| `SimplePdfEditor_Setup_v2.3.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
-| `SimplePdfEditor_v2.3.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+| `SimplePdfEditor_Setup_v2.3.1.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
+| `SimplePdfEditor_v2.3.1_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
 
 ## 功能
 
@@ -99,6 +99,7 @@ powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置
 |------|------|
 | `crates/pdfcore/src/marks.rs` | 註記資料模型、線條／箭頭幾何、復原堆疊（座標單位為 pt） |
 | `crates/pdfcore/src/document.rs` | 開檔（含密碼）、渲染、文字選取（hayro） |
+| `crates/pdfcore/src/cjkfonts.rs` | 未嵌入的中日韓字型改用 Windows 內建字型顯示 |
 | `crates/pdfcore/src/text.rs` | 文字擷取與行排序（改寫自 PdfCraft） |
 | `crates/pdfcore/src/fonts.rs` | 字型載入、度量與文字排版（預覽與存檔共用） |
 | `crates/pdfcore/src/save.rs` | 套用註記、字型子集嵌入、頁面重排、AES-256 加密（lopdf） |

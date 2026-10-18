@@ -54,3 +54,50 @@ fn reads_bookmarks_with_levels_and_pages() {
     let plain = Document::open_file(&sample(), "").unwrap();
     assert!(plain.outline().is_empty());
 }
+
+/// 只指定字型名稱、未嵌入字型的中文 PDF（台灣薪資、報表系統常見）：必須畫出字，且可擷取文字
+#[test]
+fn non_embedded_cjk_font_is_drawn_with_system_font() {
+    use lopdf::{Object, Stream, dictionary};
+    let mut doc = lopdf::Document::with_version("1.4");
+    let pages_id = doc.new_object_id();
+    let cid_font = doc.add_object(dictionary! {
+        "Type" => "Font",
+        "Subtype" => "CIDFontType0",
+        "BaseFont" => "MSung-Light",
+        "CIDSystemInfo" => dictionary! { "Registry" => Object::string_literal("Adobe"), "Ordering" => Object::string_literal("CNS1"), "Supplement" => 0 },
+        "FontDescriptor" => dictionary! { "Type" => "FontDescriptor", "FontName" => "MSung-Light", "Flags" => 6, "FontBBox" => vec![0.into(), (-200).into(), 1000.into(), 900.into()], "ItalicAngle" => 0, "Ascent" => 880, "Descent" => -120, "CapHeight" => 880, "StemV" => 93 },
+        "DW" => 1000,
+    });
+    let font = doc.add_object(dictionary! {
+        "Type" => "Font",
+        "Subtype" => "Type0",
+        "BaseFont" => "MSung-Light-UniCNS-UCS2-H",
+        "Encoding" => "UniCNS-UCS2-H",
+        "DescendantFonts" => vec![Object::Reference(cid_font)],
+    });
+    // 「員工編號」的 UCS-2 編碼
+    let text: Vec<u8> = "員工編號".encode_utf16().flat_map(|u| u.to_be_bytes()).collect();
+    let hex: String = text.iter().map(|b| format!("{b:02X}")).collect();
+    let content = doc.add_object(Stream::new(dictionary! {}, format!("BT /F1 36 Tf 50 700 Td <{hex}> Tj ET").into_bytes()));
+    let page = doc.add_object(dictionary! {
+        "Type" => "Page", "Parent" => pages_id, "MediaBox" => vec![0.into(), 0.into(), 400.into(), 800.into()],
+        "Contents" => content, "Resources" => dictionary! { "Font" => dictionary! { "F1" => font } },
+    });
+    doc.objects.insert(pages_id, Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => vec![page.into()], "Count" => 1 }));
+    let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+    doc.trailer.set("Root", catalog);
+    let mut bytes = Vec::new();
+    doc.save_to(&mut bytes).unwrap();
+
+    let d = Document::open_bytes(bytes, "msung.pdf", "").unwrap();
+    let img = d.render(0, 1.0).unwrap();
+    // 文字所在的區域（上方 60–120 pt）要有足夠的深色像素
+    let w = img.width as usize;
+    let dark = (60..120usize)
+        .flat_map(|y| (40..220usize).map(move |x| (x, y)))
+        .filter(|&(x, y)| img.rgba[(y * w + x) * 4] < 128)
+        .count();
+    assert!(dark > 400, "未嵌入的中文字應以系統字型畫出（深色像素 {dark}）");
+    assert!(d.page_text(0).plain_text().contains("員工編號"), "文字擷取：{}", d.page_text(0).plain_text());
+}

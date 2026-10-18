@@ -3,6 +3,7 @@
 
 //! 簡易 PDF 編輯器核心（不含介面）：開檔、渲染、文字選取、註記資料模型、存檔與加密。
 
+pub mod cjkfonts;
 pub mod document;
 pub mod fonts;
 pub mod geom;

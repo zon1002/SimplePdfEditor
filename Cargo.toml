@@ -7,7 +7,7 @@ members = ["crates/pdfcore", "crates/app", "crates/shellext"]
 exclude = ["vendor"]
 
 [workspace.package]
-version = "2.3.0"
+version = "2.3.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.92"
