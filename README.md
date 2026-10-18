@@ -1,6 +1,6 @@
 # 簡易 PDF 編輯器（SimplePdfEditor）— Rust 版
 
-Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.1）。
+Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.0）。
 由 C++17 / Qt6 / MuPDF 的 [v1.6.0](../SimplePdfEditor) 改寫，功能維持不變，架構參考 [PdfCraft](https://github.com/storytold/pdfcraft)
 （同為純 Rust 的 PDF 工具：使用相同的 hayro 渲染、lopdf 存檔與 egui 介面，並沿用其修補版本與文字擷取模組）。
 
@@ -9,12 +9,12 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.1）。
 
 ## 下載
 
-`dist/` 內為 v2.2.1 發行版：
+`dist/` 內為 v2.3.0 發行版：
 
 | 檔案 | 說明 |
 |------|------|
-| `SimplePdfEditor_Setup_v2.2.1.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
-| `SimplePdfEditor_v2.2.1_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+| `SimplePdfEditor_Setup_v2.3.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
+| `SimplePdfEditor_v2.3.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
 
 ## 功能
 
@@ -43,6 +43,8 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.1）。
   可設開啟密碼、權限密碼，以及是否允許列印、複製、修改。
 - **列印**（Ctrl+P）／**列印預覽**（Ctrl+Shift+P）：系統列印對話框可選頁面範圍（全部、目前頁、指定頁碼）、份數、印表機與紙張、彩色／黑白；
   列印內容含所有註記（與另存新檔結果相同），超出紙張時等比縮小，橫向頁面在直式紙張上自動旋轉。
+- **側邊欄**（F4）：視窗左側一整欄，可切換 **頁面**（所有頁面縮圖，點選跳頁、目前頁自動標示）與
+  **書籤**（PDF 大綱樹狀顯示，點選跳頁、可展開／收合、標示目前章節）；從「檢視」選單選擇是否顯示，設定自動記住。
 - **尺規**（Ctrl+R）：頁面上方與左側顯示刻度，原點為頁面左上角，單位可選公釐／公分／英吋／點（點尺規左上角切換），
   滑鼠位置標示在尺規上並於狀態列顯示座標；僅供對位，不會寫入 PDF 或列印。
 - **檔案總管整合**（安裝時可選）：檔案總管預覽窗格（Alt+P）可捲動瀏覽 PDF 所有頁面，大圖示檢視以第 1 頁作為縮圖；
@@ -108,6 +110,7 @@ powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置
 | `crates/app/src/icons.rs` | 程式繪製的工具列圖示（四種風格） |
 | `crates/app/src/ruler.rs` | 頁面尺規（刻度密度隨縮放自動調整） |
 | `crates/app/src/print.rs`、`preview.rs` | Win32 列印與列印預覽 |
+| `crates/app/src/sidebar.rs` | 左側欄：頁面縮圖與書籤 |
 | `crates/app/src/help.rs` | 使用說明與關於視窗 |
 | `crates/shellext/` | 檔案總管外掛：預覽處理常式、縮圖提供者（COM DLL）與測試程式 |
 | `vendor/` | PdfCraft 修補過的 hayro、lopdf（見 `vendor/README.md`） |

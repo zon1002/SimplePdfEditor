@@ -5,6 +5,7 @@
 
 use crate::icons::IconStyle;
 use crate::ruler::RulerUnit;
+use crate::sidebar::SidebarTab;
 use std::path::PathBuf;
 
 /// 工具列按鈕的顯示方式
@@ -43,11 +44,21 @@ pub struct Settings {
     pub button_mode: ButtonMode,
     pub rulers: bool,
     pub ruler_unit: RulerUnit,
+    /// 左側欄（頁面縮圖／書籤）
+    pub sidebar: bool,
+    pub sidebar_tab: SidebarTab,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { icon_style: IconStyle::Color, button_mode: ButtonMode::TextUnderIcon, rulers: true, ruler_unit: RulerUnit::Millimeter }
+        Self {
+            icon_style: IconStyle::Color,
+            button_mode: ButtonMode::TextUnderIcon,
+            rulers: true,
+            ruler_unit: RulerUnit::Millimeter,
+            sidebar: true,
+            sidebar_tab: SidebarTab::Pages,
+        }
     }
 }
 
@@ -71,6 +82,8 @@ impl Settings {
                     }
                 }
                 "rulers" => s.rulers = v != "0",
+                "sidebar" => s.sidebar = v != "0",
+                "sidebarTab" => s.sidebar_tab = SidebarTab::from_key(v),
                 "rulerUnit" => {
                     if let Some(u) = RulerUnit::ALL.iter().find(|u| u.suffix() == v) {
                         s.ruler_unit = *u;
@@ -88,11 +101,13 @@ impl Settings {
             let _ = std::fs::create_dir_all(dir);
         }
         let text = format!(
-            "iconStyle={}\nbuttonStyle={}\nrulers={}\nrulerUnit={}\n",
+            "iconStyle={}\nbuttonStyle={}\nrulers={}\nrulerUnit={}\nsidebar={}\nsidebarTab={}\n",
             self.icon_style.to_index(),
             self.button_mode.key(),
             if self.rulers { 1 } else { 0 },
-            self.ruler_unit.suffix()
+            self.ruler_unit.suffix(),
+            if self.sidebar { 1 } else { 0 },
+            self.sidebar_tab.key()
         );
         let _ = std::fs::write(p, text);
     }

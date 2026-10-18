@@ -288,3 +288,106 @@ fn screenshot_resize_handles() {
     let out = format!("{}/../../target/ui-shot.png", env!("CARGO_MANIFEST_DIR"));
     img.save(&out).unwrap();
 }
+
+// ---------------------------------------------------------------- 左側欄：頁面縮圖與書籤
+
+/// 範例檔加上兩層書籤
+fn bookmarked_pdf() -> String {
+    let out = format!("{}/../../target/edit-mode-test", env!("CARGO_MANIFEST_DIR"));
+    std::fs::create_dir_all(&out).unwrap();
+    let out = format!("{out}/bookmarks.pdf");
+    let mut lo = lopdf::Document::load(sample()).unwrap();
+    let pages: Vec<lopdf::ObjectId> = lo.get_pages().values().copied().collect();
+    let ch1 = lo.add_bookmark(lopdf::Bookmark::new("第一章".into(), [0.0; 3], 0, pages[0]), None);
+    lo.add_bookmark(lopdf::Bookmark::new("1.1 小節".into(), [0.0; 3], 0, pages[1]), Some(ch1));
+    lo.add_bookmark(lopdf::Bookmark::new("第二章".into(), [0.0; 3], 0, pages[2]), None);
+    let outline = lo.build_outline().unwrap();
+    lo.catalog_mut().unwrap().set("Outlines", lopdf::Object::Reference(outline));
+    lo.save(&out).unwrap();
+    out
+}
+
+fn sidebar_harness(path: &str, tab: crate::sidebar::SidebarTab) -> Harness<'static, App> {
+    let mut app = App::new(0);
+    app.settings.sidebar = true;
+    app.settings.sidebar_tab = tab;
+    app.open_path(path);
+    let mut h = harness(app);
+    h.run();
+    h
+}
+
+#[test]
+fn clicking_a_thumbnail_goes_to_that_page() {
+    let mut h = sidebar_harness(&sample(), crate::sidebar::SidebarTab::Pages);
+    // 每頁都有縮圖，可直接點選
+    for p in 1..=3 {
+        h.get_by_label(&format!("第 {p} 頁縮圖"));
+    }
+    h.get_by_label("第 3 頁縮圖").click();
+    h.run();
+    assert_eq!(h.state().page, 2);
+    h.get_by_label("第 1 頁縮圖").click();
+    h.run();
+    assert_eq!(h.state().page, 0);
+    // 縮圖在背景逐張產生
+    h.run_steps(5);
+    assert_eq!(h.state().thumbs.len(), 3, "應產生 3 張縮圖");
+}
+
+#[test]
+fn f4_toggles_the_sidebar() {
+    let mut h = sidebar_harness(&sample(), crate::sidebar::SidebarTab::Pages);
+    assert!(h.query_by_label("第 1 頁縮圖").is_some());
+    h.key_press(egui::Key::F4);
+    h.run();
+    assert!(!h.state().settings.sidebar);
+    assert!(h.query_by_label("第 1 頁縮圖").is_none(), "隱藏後不顯示縮圖");
+    h.key_press(egui::Key::F4);
+    h.run();
+    assert!(h.state().settings.sidebar);
+}
+
+#[test]
+fn bookmarks_navigate_and_collapse() {
+    let path = bookmarked_pdf();
+    let mut h = sidebar_harness(&path, crate::sidebar::SidebarTab::Pages);
+    // 切到「書籤」分頁
+    h.get_by_label("書籤").click();
+    h.run();
+    h.get_by_label("第二章").click();
+    h.run();
+    assert_eq!(h.state().page, 2);
+    h.get_by_label("1.1 小節").click();
+    h.run();
+    assert_eq!(h.state().page, 1);
+    // 收合「第一章」：子項目隱藏
+    h.get_by_label("收合").click();
+    h.run();
+    assert!(h.query_by_label("1.1 小節").is_none(), "收合後子書籤隱藏");
+    h.get_by_label("展開").click();
+    h.run();
+    assert!(h.query_by_label("1.1 小節").is_some());
+}
+
+#[test]
+fn file_without_bookmarks_says_so() {
+    let mut h = sidebar_harness(&sample(), crate::sidebar::SidebarTab::Bookmarks);
+    h.run();
+    assert!(h.query_by_label("此 PDF 沒有書籤").is_some());
+}
+
+/// 輸出側欄截圖供人工檢查（需要顯示卡；`cargo test -- --ignored screenshot`）
+#[test]
+#[ignore]
+fn screenshot_sidebar() {
+    for (tab, name) in [(crate::sidebar::SidebarTab::Pages, "pages"), (crate::sidebar::SidebarTab::Bookmarks, "bookmarks")] {
+        let mut h = sidebar_harness(&bookmarked_pdf(), tab);
+        crate::setup_fonts(&h.ctx);
+        h.run_steps(6);
+        h.state_mut().go_to_page(1);
+        h.run_steps(3);
+        let img = h.render().expect("render");
+        img.save(format!("{}/../../target/ui-sidebar-{name}.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    }
+}

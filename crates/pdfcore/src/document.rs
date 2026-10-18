@@ -39,6 +39,16 @@ pub struct Image {
     pub rgba: Vec<u8>,
 }
 
+/// 書籤（PDF 大綱）的一個項目
+#[derive(Clone, Debug, PartialEq)]
+pub struct OutlineItem {
+    /// 階層：1 為最上層
+    pub level: usize,
+    pub title: String,
+    /// 目的頁（0 起算）
+    pub page: usize,
+}
+
 /// 單頁渲染的最大邊長（像素）
 pub const MAX_RENDER_SIDE: f64 = 8000.0;
 
@@ -48,6 +58,7 @@ pub struct Document {
     path: String,
     pdf: Pdf,
     text: RefCell<HashMap<usize, Rc<PageText>>>,
+    outline: RefCell<Option<Rc<Vec<OutlineItem>>>>,
 }
 
 impl Document {
@@ -67,7 +78,14 @@ impl Document {
         if pdf.pages().is_empty() {
             return Err(OpenError::Invalid("PDF 沒有任何頁面".into()));
         }
-        Ok(Document { bytes, password: password.to_string(), path: path.to_string(), pdf, text: RefCell::new(HashMap::new()) })
+        Ok(Document {
+            bytes,
+            password: password.to_string(),
+            path: path.to_string(),
+            pdf,
+            text: RefCell::new(HashMap::new()),
+            outline: RefCell::new(None),
+        })
     }
 
     pub fn open_file(path: &str, password: &str) -> Result<Document, OpenError> {
@@ -141,6 +159,35 @@ impl Document {
             rgba.iter_mut().for_each(|b| *b = 255);
         }
         Some(Image { width: pw as u32, height: ph as u32, rgba })
+    }
+
+    /// 書籤（PDF 大綱），依文件順序；沒有書籤或無法解析時為空（快取）
+    pub fn outline(&self) -> Rc<Vec<OutlineItem>> {
+        if let Some(o) = self.outline.borrow().as_ref() {
+            return o.clone();
+        }
+        let pages = self.page_count();
+        let items = catch_unwind(AssertUnwindSafe(|| {
+            let doc = lopdf::Document::load_mem_with_options(&self.bytes, lopdf::LoadOptions::with_password(&self.password)).ok()?;
+            let toc = doc.get_toc().ok()?;
+            Some(
+                toc.toc
+                    .into_iter()
+                    .filter(|t| t.page >= 1 && t.page <= pages)
+                    .map(|t| OutlineItem {
+                        level: t.level.max(1),
+                        title: t.title.trim_matches(|c: char| c == '\0' || c.is_whitespace()).to_string(),
+                        page: t.page - 1,
+                    })
+                    .collect::<Vec<_>>(),
+            )
+        }))
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+        let items = Rc::new(items);
+        *self.outline.borrow_mut() = Some(items.clone());
+        items
     }
 
     /// 頁面的文字（快取）

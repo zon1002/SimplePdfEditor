@@ -18,6 +18,7 @@ mod preview;
 mod print;
 mod ruler;
 mod settings;
+mod sidebar;
 mod view;
 #[cfg(test)]
 mod tests;
@@ -107,6 +108,9 @@ impl App {
             ui.add_space(2.0);
         });
         egui::Panel::bottom("status").show(ui, |ui| self.show_status(ui));
+        if self.settings.sidebar {
+            egui::Panel::left("sidebar").resizable(true).default_size(200.0).size_range(120.0..=420.0).show(ui, |ui| self.show_sidebar(ui));
+        }
         egui::CentralPanel::no_frame().show(ui, |ui| self.show_view(ui));
 
         help::show_help(&ctx, &mut self.help);

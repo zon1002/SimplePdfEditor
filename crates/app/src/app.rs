@@ -231,6 +231,12 @@ pub struct App {
     pub page_tex: Option<((usize, u64, u64, bool), TextureHandle)>,
     pub text_tex: HashMap<u64, (TextureHandle, pdfcore::Rect)>,
     pub icon_tex: HashMap<(IconId, u8, bool, u32), TextureHandle>,
+    /// 左側欄的頁面縮圖（頁碼 -> 貼圖）
+    pub thumbs: HashMap<usize, TextureHandle>,
+    /// 側欄最後捲動到的頁面（目前頁改變時自動捲動）
+    pub thumb_follow: Option<usize>,
+    /// 收合的書籤（書籤索引）
+    pub collapsed: std::collections::HashSet<usize>,
 
     pub status: Option<(String, f64)>,
     pub dialog: Option<Dialog>,
@@ -274,6 +280,9 @@ impl App {
             page_tex: None,
             text_tex: HashMap::new(),
             icon_tex: HashMap::new(),
+            thumbs: HashMap::new(),
+            thumb_follow: None,
+            collapsed: std::collections::HashSet::new(),
             status: None,
             dialog: None,
             help: HelpState::default(),
@@ -364,6 +373,9 @@ impl App {
                 self.base_img = None;
                 self.page_tex = None;
                 self.text_tex.clear();
+                self.thumbs.clear();
+                self.thumb_follow = None;
+                self.collapsed.clear();
                 self.fit_pending = true;
                 self.scroll_to_top = true;
                 self.dialog = None;

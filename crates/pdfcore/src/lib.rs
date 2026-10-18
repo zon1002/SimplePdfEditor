@@ -13,7 +13,7 @@ pub mod save;
 pub mod selftest;
 pub mod text;
 
-pub use document::{Document, Image, OpenError};
+pub use document::{Document, Image, OpenError, OutlineItem};
 pub use geom::{Affine, Pt, Quad, Rect, Rgba};
 pub use marks::{EditModel, LineGeometry, Mark, MarkList, MarkType, line_geometry};
 pub use save::SaveOptions;

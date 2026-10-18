@@ -55,6 +55,8 @@ enum Act {
     ZoomOut,
     Fit,
     Rulers,
+    Sidebar,
+    SidebarTab(crate::sidebar::SidebarTab),
     Help,
     About,
     Tool(Tool),
@@ -153,6 +155,15 @@ impl App {
                 self.settings.rulers = !self.settings.rulers;
                 self.settings.save();
             }
+            Act::Sidebar => {
+                self.settings.sidebar = !self.settings.sidebar;
+                self.settings.save();
+            }
+            Act::SidebarTab(t) => {
+                self.settings.sidebar = true;
+                self.settings.sidebar_tab = t;
+                self.settings.save();
+            }
             Act::Help => self.help.open = true,
             Act::About => self.about_open = true,
             Act::Tool(t) if open => self.set_tool(t),
@@ -167,7 +178,8 @@ impl App {
         }
         let c = Modifiers::COMMAND;
         let cs = Modifiers::COMMAND | Modifiers::SHIFT;
-        let combos: [(KeyboardShortcut, Act); 18] = [
+        let combos: [(KeyboardShortcut, Act); 19] = [
+            (shortcut(Modifiers::NONE, Key::F4), Act::Sidebar),
             (shortcut(cs, Key::P), Act::Preview),
             (shortcut(cs, Key::Z), Act::Redo),
             (shortcut(cs, Key::S), Act::Save),
@@ -253,6 +265,18 @@ impl App {
                 ui.separator();
                 item(ui, "上一頁", "PgUp", open, Act::Prev, &mut todo);
                 item(ui, "下一頁", "PgDn", open, Act::Next, &mut todo);
+                ui.separator();
+                let mut side = self.settings.sidebar;
+                if ui.checkbox(&mut side, "顯示側邊欄（頁面／書籤）　F4").clicked() {
+                    todo = Some(Act::Sidebar);
+                }
+                use crate::sidebar::SidebarTab;
+                if ui.radio(self.settings.sidebar && self.settings.sidebar_tab == SidebarTab::Pages, "　頁面縮圖").clicked() {
+                    todo = Some(Act::SidebarTab(SidebarTab::Pages));
+                }
+                if ui.radio(self.settings.sidebar && self.settings.sidebar_tab == SidebarTab::Bookmarks, "　書籤").clicked() {
+                    todo = Some(Act::SidebarTab(SidebarTab::Bookmarks));
+                }
                 ui.separator();
                 let mut rulers = self.settings.rulers;
                 if ui.checkbox(&mut rulers, "顯示尺規　Ctrl+R").clicked() {

@@ -33,3 +33,24 @@ fn selftest_saves_marks_and_encrypted_export() {
     assert_eq!(e.page_count(), orig.page_count().min(3).min(2).max(1).min(if orig.page_count() >= 3 { 2 } else { 1 }));
     Document::open_file(&enc, "owner").expect("owner pw");
 }
+
+#[test]
+fn reads_bookmarks_with_levels_and_pages() {
+    let mut lo = lopdf::Document::load(sample()).unwrap();
+    let pages: Vec<lopdf::ObjectId> = lo.get_pages().values().copied().collect();
+    let ch1 = lo.add_bookmark(lopdf::Bookmark::new("第一章".into(), [0.0; 3], 0, pages[0]), None);
+    lo.add_bookmark(lopdf::Bookmark::new("1.1 小節".into(), [0.0; 3], 0, pages[1]), Some(ch1));
+    lo.add_bookmark(lopdf::Bookmark::new("Chapter 2".into(), [0.0; 3], 0, pages[2]), None);
+    let outline = lo.build_outline().unwrap();
+    lo.catalog_mut().unwrap().set("Outlines", lopdf::Object::Reference(outline));
+    let mut bytes = Vec::new();
+    lo.save_to(&mut bytes).unwrap();
+
+    let doc = Document::open_bytes(bytes, "bookmarks.pdf", "").unwrap();
+    let items: Vec<(usize, String, usize)> = doc.outline().iter().map(|o| (o.level, o.title.clone(), o.page)).collect();
+    assert_eq!(items, vec![(1, "第一章".to_string(), 0), (2, "1.1 小節".to_string(), 1), (1, "Chapter 2".to_string(), 2)]);
+
+    // 沒有書籤的檔案：空清單
+    let plain = Document::open_file(&sample(), "").unwrap();
+    assert!(plain.outline().is_empty());
+}
