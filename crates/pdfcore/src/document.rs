@@ -212,6 +212,21 @@ impl Document {
 
 /// OCR 結果（尚未存檔）轉成可選取的頁面文字
 pub fn ocr_page_text(lines: &[crate::marks::OcrTextLine], offset: Pt) -> PageText {
+    crate::text::layout(ocr_glyphs(lines, offset))
+}
+
+/// 頁面原有的文字加上 OCR 結果，合併成一份可選取的文字（依閱讀順序重新排列）。
+/// 掃描檔、CAD 圖面常帶有頁尾或浮水印文字，兩者都要能選取。
+pub fn merge_ocr_text(existing: &PageText, lines: &[crate::marks::OcrTextLine], offset: Pt) -> PageText {
+    if lines.is_empty() {
+        return existing.clone();
+    }
+    let mut glyphs = existing.glyphs.clone();
+    glyphs.extend(ocr_glyphs(lines, offset));
+    crate::text::layout(glyphs)
+}
+
+fn ocr_glyphs(lines: &[crate::marks::OcrTextLine], offset: Pt) -> Vec<crate::text::TextGlyph> {
     let mut glyphs = Vec::new();
     for l in lines {
         for g in &l.glyphs {
@@ -232,7 +247,7 @@ pub fn ocr_page_text(lines: &[crate::marks::OcrTextLine], offset: Pt) -> PageTex
             });
         }
     }
-    crate::text::layout(glyphs)
+    glyphs
 }
 
 /// 在頁面文字中依拖曳起訖點選取

@@ -531,17 +531,35 @@ impl App {
     }
 }
 
-/// 頁面文字選取：PDF 沒有文字時改用 OCR 結果（尚未存檔）
-pub fn select_on_page(doc: &pdfcore::Document, marks: &[Mark], page: usize, a: Pt, b: Pt) -> (Vec<pdfcore::Quad>, String) {
-    let pt = doc.page_text(page);
-    if !pt.is_empty() {
-        return pdfcore::document::select_in(&pt, a, b);
-    }
+/// 頁面上可選取的文字：PDF 原有的文字加上尚未存檔的 OCR 結果
+pub fn selectable_text(doc: &pdfcore::Document, marks: &[Mark], page: usize) -> std::rc::Rc<pdfcore::text::PageText> {
+    let existing = doc.page_text(page);
     let lines: Vec<OcrTextLine> = marks.iter().filter(|m| m.kind == MarkType::Ocr && m.page == page).flat_map(|m| m.ocr.iter().cloned()).collect();
     if lines.is_empty() {
-        return (Vec::new(), String::new());
+        return existing;
     }
-    pdfcore::document::select_in(&pdfcore::document::ocr_page_text(&lines, Pt::default()), a, b)
+    std::rc::Rc::new(pdfcore::document::merge_ocr_text(&existing, &lines, Pt::default()))
+}
+
+/// 依拖曳起訖點選取頁面文字（含 OCR 結果）
+pub fn select_on_page(doc: &pdfcore::Document, marks: &[Mark], page: usize, a: Pt, b: Pt) -> (Vec<pdfcore::Quad>, String) {
+    pdfcore::document::select_in(&selectable_text(doc, marks, page), a, b)
+}
+
+impl App {
+    /// 目前頁可選取的文字（依註記版本快取，拖曳選取時不必每次重新排列）
+    pub fn page_selectable_text(&mut self) -> Option<std::rc::Rc<pdfcore::text::PageText>> {
+        let doc = self.doc.as_ref()?;
+        let key = (self.page, self.marks_gen);
+        if let Some((k, t)) = &self.select_cache {
+            if *k == key {
+                return Some(t.clone());
+            }
+        }
+        let t = selectable_text(doc, &self.model.marks, self.page);
+        self.select_cache = Some((key, t.clone()));
+        Some(t)
+    }
 }
 
 /// 背景執行：逐頁渲染並辨識；回傳每頁的結果（頁面座標）

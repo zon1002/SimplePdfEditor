@@ -248,6 +248,8 @@ pub struct App {
     pub ocr_dialog: Option<crate::ocr_ui::OcrDialog>,
     pub ocr_job: Option<crate::ocr_ui::OcrJob>,
     pub packs_ui: crate::ocr_ui::PackManager,
+    /// 目前頁可選取的文字（原有文字＋OCR 結果），鍵為 (頁, marks_gen)
+    pub select_cache: Option<((usize, u64), std::rc::Rc<pdfcore::text::PageText>)>,
     pub hwnd: isize,
     /// 連續調整同一屬性時合併成一次復原
     pub coalesce: Option<(&'static str, f64)>,
@@ -296,6 +298,7 @@ impl App {
             ocr_dialog: None,
             ocr_job: None,
             packs_ui: Default::default(),
+            select_cache: None,
             hwnd,
             coalesce: None,
             allow_close: false,

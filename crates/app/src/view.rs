@@ -699,6 +699,7 @@ impl App {
     }
 
     fn on_move(&mut self, cur: Pt, raw: Pt, shift: bool) {
+        let page_text = if matches!(self.drag, Drag::Selecting { .. }) { self.page_selectable_text() } else { None };
         match &mut self.drag {
             Drag::Resizing { index, handle, before, moved } => {
                 let (Some(orig), Some(m)) = (before.get(*index), self.model.marks.get_mut(*index)) else { return };
@@ -722,8 +723,8 @@ impl App {
                 }
             }
             Drag::Selecting { start, quads, text } => {
-                let Some(doc) = &self.doc else { return };
-                let (q, t) = crate::ocr_ui::select_on_page(doc, &self.model.marks, self.page, *start, cur);
+                let Some(page_text) = &page_text else { return };
+                let (q, t) = pdfcore::document::select_in(page_text, *start, cur);
                 *quads = q;
                 *text = t;
                 if quads.is_empty() {

@@ -654,4 +654,18 @@ fn page_with_footer_text_is_still_recognized_without_duplicating_it() {
 ");
     assert!(all.contains("quick brown fox") && all.contains("中文測試"), "{all}");
     assert!(!all.to_lowercase().contains("pdffactory"), "原有的頁尾文字不應重複辨識：{all}");
+
+    // 存檔前：辨識出的文字與原有的頁尾都能選取（頁面有原有文字時，不能只看原有文字）
+    let app = h.state();
+    let doc = app.doc.as_ref().unwrap();
+    let (w, hh) = doc.page_size(0);
+    let (_, text) = crate::ocr_ui::select_on_page(doc, &app.model.marks, 0, Pt::new(0.0, 0.0), Pt::new(w, hh));
+    assert!(text.contains("quick brown fox") && text.contains("pdfFactory"), "{text}");
+
+    // 以高亮工具實際拖過第一行：應沿著辨識出的文字加上高亮
+    h.state_mut().set_tool(Tool::Highlight);
+    drag(&mut h, Pt::new(60.0, 50.0), Pt::new(400.0, 60.0), false);
+    let hl: Vec<_> = h.state().model.marks.iter().filter(|m| m.kind == MarkType::Highlight).collect();
+    assert_eq!(hl.len(), 1, "應加上一個高亮");
+    assert!(h.state().last_text.contains("quick brown fox"), "高亮應選到辨識出的文字：{:?}", h.state().last_text);
 }
