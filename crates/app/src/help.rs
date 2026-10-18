@@ -137,6 +137,7 @@ const SECTIONS: &[Section] = &[
                 "預設**略過已有文字的頁面**，避免重複辨識一般 PDF。",
                 "整次辨識為一個復原步驟（Ctrl+Z）；同一頁重新辨識會取代先前的結果。",
                 "語言包：「**工具 → OCR 語言管理…**」可下載（顯示進度、可取消）、**從檔案加入**（給沒有網路的電腦，先在別台電腦下載 zip）、移除；也可重新執行安裝程式勾選加裝。",
+                "語言包的下載網站：`https://github.com/zon1002/SimplePdfEditor/releases/tag/ocr-packs`（固定位置；也可在這裡手動下載 zip，再以「從檔案加入…」安裝）。",
                 "語言包下載到 `%LOCALAPPDATA%\\SimplePdfEditor\\ocr\\packs`，不需系統管理員權限；安裝程式安裝的在程式資料夾的 `ocr\\packs`。",
             ]),
             Block::Note("辨識結果以文字繪製模式 3（不可見）寫入頁面，其他閱讀器（Acrobat、瀏覽器）同樣可搜尋與複製。"),

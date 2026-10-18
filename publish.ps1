@@ -58,7 +58,7 @@ $size = (Get-ChildItem $out -Recurse | Measure-Object Length -Sum).Sum / 1MB
 
 # ---- OCR 語言包 ----
 # target\ocr-packs：各語言包資料夾（離線版安裝程式內含 engine 與 std）與要上傳到
-# GitHub Releases（ocr-packs-v1）的 zip、ocr-packs.json。沒有時從上游（ModelScope、Microsoft）重新下載並建置。
+# 下載網站（GitHub Release，標籤 ocr-packs）的 zip、ocr-packs.json。沒有時從上游（ModelScope、Microsoft）重新下載並建置。
 $packs = Join-Path $root 'target\ocr-packs'
 Push-Location $root
 try {

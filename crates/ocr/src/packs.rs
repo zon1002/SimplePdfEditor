@@ -48,6 +48,9 @@ pub struct PackInfo {
     pub files: Vec<PackFile>,
     /// 語言包 zip 的下載網址、大小與 SHA-256
     pub url: String,
+    /// 備用下載網址（主要網址失敗時依序嘗試）
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mirrors: Vec<String>,
     pub zip_size: u64,
     pub zip_sha256: String,
     /// 安裝 OCR 時預設勾選
@@ -76,8 +79,18 @@ pub struct Manifest {
 /// 隨程式附帶的清單（離線也能列出可安裝的語言包）
 pub const BUNDLED_MANIFEST: &str = include_str!("../../../ocr/ocr-packs.json");
 
-/// 最新清單的網址（GitHub Releases）
-pub const MANIFEST_URL: &str = "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-packs.json";
+/// OCR 語言包的下載網站：固定的 GitHub Release（標籤 `ocr-packs`），不隨程式版本改變。
+/// 各版本的語言包以檔名區分（例如 `ocr-std-v1.zip`、`ocr-std-v2.zip`），舊檔一律保留，
+/// 已發行的程式與安裝程式的下載網址永遠有效。
+pub const DOWNLOAD_PAGE: &str = "https://github.com/zon1002/SimplePdfEditor/releases/tag/ocr-packs";
+
+/// 最新清單的網址，依序嘗試。語言包更新版本或搬移位置時只需更新清單，已安裝的程式會自動取得新的網址：
+/// 1. 下載網站上的 ocr-packs.json
+/// 2. 原始碼庫中的 ocr/ocr-packs.json（下載網站無法使用時的備援）
+pub const MANIFEST_URLS: &[&str] = &[
+    "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-packs.json",
+    "https://raw.githubusercontent.com/zon1002/SimplePdfEditor/main/ocr/ocr-packs.json",
+];
 
 pub fn bundled_manifest() -> Manifest {
     serde_json::from_str(BUNDLED_MANIFEST).unwrap_or(Manifest { version: 0, packs: Vec::new() })
@@ -303,7 +316,14 @@ pub fn download_and_install(info: &PackInfo, progress: Progress<'_>) -> Result<P
     let root = user_dir().ok_or("找不到使用者資料夾（LOCALAPPDATA）")?;
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     let tmp = root.join(format!(".download-{}.zip", info.id));
-    download(&info.url, &tmp, &info.zip_sha256, info.zip_size, progress)?;
+    let mut result = Err(String::new());
+    for url in std::iter::once(&info.url).chain(&info.mirrors) {
+        result = download(url, &tmp, &info.zip_sha256, info.zip_size, progress);
+        if result.is_ok() || result.as_ref().is_err_and(|e| e == "已取消下載") {
+            break;
+        }
+    }
+    result?;
     let r = install_zip(&tmp, Some(info));
     let _ = std::fs::remove_file(&tmp);
     r
@@ -311,7 +331,20 @@ pub fn download_and_install(info: &PackInfo, progress: Progress<'_>) -> Result<P
 
 /// 取得最新的語言包清單
 pub fn fetch_manifest() -> Result<Manifest, String> {
-    let resp = agent().get(MANIFEST_URL).call().map_err(|e| http_error(&e, "無法取得語言包清單"))?;
-    let text = resp.into_body().read_to_string().map_err(|e| e.to_string())?;
-    parse_manifest(&text)
+    let mut first_error = None;
+    for url in MANIFEST_URLS {
+        let r = agent()
+            .get(*url)
+            .call()
+            .map_err(|e| http_error(&e, "無法取得語言包清單"))
+            .and_then(|resp| resp.into_body().read_to_string().map_err(|e| e.to_string()))
+            .and_then(|text| parse_manifest(&text));
+        match r {
+            Ok(m) => return Ok(m),
+            Err(e) => {
+                first_error.get_or_insert(e);
+            }
+        }
+    }
+    Err(first_error.unwrap_or_default())
 }

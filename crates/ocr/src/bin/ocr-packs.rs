@@ -45,6 +45,9 @@ struct SrcPack {
 #[derive(Deserialize)]
 struct Src {
     release_url: String,
+    /// 備用下載位置（目錄網址，後面接 zip 檔名）
+    #[serde(default)]
+    mirror_urls: Vec<String>,
     upstream: BTreeMap<String, Upstream>,
     packs: Vec<SrcPack>,
 }
@@ -148,6 +151,7 @@ fn build(cache: &Path, out: &Path) {
             languages: sp.languages.clone(),
             files,
             url: String::new(),
+            mirrors: Vec::new(),
             zip_size: 0,
             zip_sha256: String::new(),
             default: sp.default,
@@ -159,6 +163,7 @@ fn build(cache: &Path, out: &Path) {
         let zip_path = out.join(&zip_name);
         write_zip(&dir, &zip_path);
         info.url = format!("{}/{zip_name}", src.release_url);
+        info.mirrors = src.mirror_urls.iter().map(|m| format!("{m}/{zip_name}")).collect();
         info.zip_size = std::fs::metadata(&zip_path).unwrap().len();
         info.zip_sha256 = sha256_file(&zip_path).unwrap();
         println!("{:8} {:>7.1} MB → {zip_name} {:>7.1} MB", sp.id, info.total_size() as f64 / 1048576.0, info.zip_size as f64 / 1048576.0);

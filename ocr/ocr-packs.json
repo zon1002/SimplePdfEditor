@@ -40,7 +40,7 @@
           "role": ""
         }
       ],
-      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-engine-v1.zip",
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-engine-v1.zip",
       "zip_size": 7300876,
       "zip_sha256": "bc731486654e2e047f577f9558249e6d4d69f701b73558cc8aaf0ea979e176fa",
       "default": true,
@@ -78,7 +78,7 @@
           "role": ""
         }
       ],
-      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-std-v1.zip",
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-std-v1.zip",
       "zip_size": 26631008,
       "zip_sha256": "d1c25c7e6f851524047c5e268d150b4c31b1bda51ec910b408dfa12849934586",
       "default": true,
@@ -116,7 +116,7 @@
           "role": ""
         }
       ],
-      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-medium-v1.zip",
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-medium-v1.zip",
       "zip_size": 105757326,
       "zip_sha256": "16cd9a6fa078067abf2741994fb25a277b6b02351dc1bb6809d81a6337f738d3",
       "default": false,
@@ -154,7 +154,7 @@
           "role": ""
         }
       ],
-      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-server-v1.zip",
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-server-v1.zip",
       "zip_size": 155792506,
       "zip_sha256": "98e25abcd6295523fa1d368941e467131a7a0d0f34b715919f24ffd6b0157f62",
       "default": false,
@@ -184,7 +184,7 @@
           "role": ""
         }
       ],
-      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-ko-v1.zip",
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-ko-v1.zip",
       "zip_size": 8334062,
       "zip_sha256": "1c4d8520e061aedc0fb6d924cdd8ae8497a083219715de7e9bc354c6303cd266",
       "default": false,
@@ -219,7 +219,7 @@
           "role": ""
         }
       ],
-      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-latin-v1.zip",
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs/ocr-latin-v1.zip",
       "zip_size": 7271079,
       "zip_sha256": "efcf2554363eee9a359943854b2fdda3992edd14e14f599444e14e2936973aa1",
       "default": false,

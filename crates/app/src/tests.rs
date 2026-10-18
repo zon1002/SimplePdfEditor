@@ -550,8 +550,9 @@ fn ocr_needs_edit_mode_and_pack_manager_lists_packs() {
     h.run();
     assert!(h.state().ocr_dialog.is_none(), "檢視模式不能辨識");
     h.state_mut().open_pack_manager();
-    h.run();
+    h.run_steps(4);
     h.get_by_label("OCR 語言管理");
+    h.get_by_label_contains("releases/tag/ocr-packs");
     h.get_by_label("從檔案加入…");
     h.get_by_label_contains("日文　高精度");
     h.get_by_label("韓文");
@@ -593,10 +594,14 @@ fn screenshot_ocr() {
 
 #[test]
 #[ignore]
-fn screenshot_pack_download_failure() {
-    // 沒有任何語言包（與剛安裝、未勾選 OCR 相同），下載目前會得到伺服器的回應
+fn screenshot_pack_download() {
+    // 沒有任何語言包（與剛安裝、未勾選 OCR 相同）：從下載網站實際下載
     // SAFETY: 只在讀取語言包之前設定
     unsafe { std::env::set_var("SPE_OCR_PACKS", format!("{}/../../target/no-packs", env!("CARGO_MANIFEST_DIR"))) };
+    let home = format!("{}/../../target/download-test", env!("CARGO_MANIFEST_DIR"));
+    let _ = std::fs::remove_dir_all(&home);
+    // SAFETY: 同上；下載的語言包裝到 target 下，不動到使用者資料夾
+    unsafe { std::env::set_var("LOCALAPPDATA", &home) };
     let mut h = harness(opened());
     crate::setup_fonts(&h.ctx);
     h.run();
@@ -606,11 +611,12 @@ fn screenshot_pack_download_failure() {
     h.step();
     h.step();
     let t = std::time::Instant::now();
-    while h.state().packs_ui.downloading() && t.elapsed().as_secs() < 60 {
+    while h.state().packs_ui.downloading() && t.elapsed().as_secs() < 300 {
         std::thread::sleep(std::time::Duration::from_millis(200));
         h.step();
     }
     h.run_steps(4);
     let img = h.render().expect("render");
-    img.save(format!("{}/../../target/ui-ocr-download-error.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    img.save(format!("{}/../../target/ui-ocr-download.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    assert!(ocr::packs::find_installed("ko").is_some() && ocr::packs::find_installed("engine").is_some(), "應已下載並安裝韓文與辨識引擎");
 }

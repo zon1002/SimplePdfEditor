@@ -18,7 +18,14 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.4.0）。
 | `SimplePdfEditor_Setup_v2.4.0_Online.exe` | 安裝程式（線上版）：功能相同、檔案較小，勾選的 OCR 語言包在安裝時下載 |
 | `SimplePdfEditor_v2.4.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合；OCR 語言包可在程式內下載） |
 
-OCR 語言包（zip）與清單 `ocr-packs.json` 放在 GitHub Releases 的 `ocr-packs-v1`，程式與線上版安裝程式從那裡下載。
+### OCR 語言包下載網站
+
+**<https://github.com/zon1002/SimplePdfEditor/releases/tag/ocr-packs>**（固定位置，不隨程式版本改變）
+
+- 所有 OCR 語言包（`ocr-<名稱>-v<版本>.zip`）與清單 `ocr-packs.json` 都放在這個 Release；程式內下載與線上版安裝程式都從這裡下載。
+- 沒有網路的電腦：在別台電腦下載需要的 zip（至少 `ocr-engine-v1.zip` 與一個中英日語言包，例如 `ocr-std-v1.zip`），再於程式中「工具 → OCR 語言管理 → 從檔案加入…」安裝；zip 會依清單的 SHA-256 驗證。
+- 語言包更新時以新的版本號另外上傳（例如 `ocr-std-v2.zip`），**舊版檔案永久保留**，已發行的程式與安裝程式的下載網址不會失效。
+- 程式開啟語言管理時會自動讀取最新的 `ocr-packs.json`（下載網站，備援為原始碼庫的 `ocr/ocr-packs.json`），因此日後語言包改版或搬移位置，只要更新清單，已安裝的程式就會看到新版本並從新位置下載；清單也支援每個語言包的備用下載網址（`mirrors`）。
 
 ## 功能
 
@@ -113,7 +120,7 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 依序：建置並整理 `publish\`（含煙霧測試、檢查不依賴 VC++ 執行環境）→ 準備 OCR 語言包 `target\ocr-packs\`
 （沒有時以 `cargo run -p ocr --bin ocr-packs -- fetch / build` 從 ModelScope、Microsoft 下載上游檔案並驗證 SHA-256 後建置）→
 以 Inno Setup 6 產生 `dist\SimplePdfEditor_Setup_v2.4.0.exe`（離線版）與 `…_Online.exe`（線上版，`ISCC /DOnline`）。
-`target\ocr-packs\` 內的 `ocr-*.zip` 與 `ocr-packs.json` 要上傳到 GitHub Releases 的 `ocr-packs-v1`。
+`target\ocr-packs\` 內的 `ocr-*.zip` 與 `ocr-packs.json` 要上傳到下載網站（GitHub Release，標籤 `ocr-packs`）：新版本的 zip 只新增、不刪除舊檔，`ocr-packs.json` 則覆蓋更新；`ocr/ocr-packs.json` 同時提交到 main 作為備援清單。
 
 OCR 測試（`crates/ocr/tests`、介面測試中的 OCR 流程）需要 `target\ocr-packs\`，沒有時自動略過。
 

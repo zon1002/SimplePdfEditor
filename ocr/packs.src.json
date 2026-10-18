@@ -1,5 +1,5 @@
 {
-  "release_url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1",
+  "release_url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs",
   "upstream": {
     "onnxruntime-win-x64-1.31.0.zip": {
       "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.31.0/onnxruntime-win-x64-1.31.0.zip",

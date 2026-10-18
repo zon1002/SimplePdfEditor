@@ -65,6 +65,9 @@ pub struct PackManager {
     /// 最近一次失敗：(語言包 id，空字串表示整體), 說明
     error: Option<(String, String)>,
     loaded: bool,
+    /// 開啟時自動取得最新清單（每次執行一次）；自動取得失敗時不打擾使用者，改用隨程式附帶的清單
+    auto_fetched: bool,
+    quiet_fetch: bool,
 }
 
 fn mb(bytes: u64) -> String {
@@ -314,14 +317,22 @@ impl App {
         if !pm.loaded {
             pm.refresh();
         }
+        if !pm.auto_fetched && pm.fetching.is_none() {
+            pm.auto_fetched = true;
+            pm.quiet_fetch = true;
+            pm.fetching = Some(std::thread::spawn(packs::fetch_manifest));
+        }
         let mut popup: Option<String> = None;
         // 背景工作完成
         if pm.fetching.as_ref().is_some_and(|h| h.is_finished()) {
             match pm.fetching.take().map(|h| h.join().unwrap_or_else(|_| Err("取得清單失敗".into()))) {
                 Some(Ok(m)) => {
                     pm.remote = Some(m);
-                    pm.message = Some("已取得最新的語言包清單".into());
+                    if !pm.quiet_fetch {
+                        pm.message = Some("已取得最新的語言包清單".into());
+                    }
                 }
+                Some(Err(_)) if pm.quiet_fetch => {}
                 Some(Err(e)) => {
                     pm.message = None;
                     pm.error = Some((String::new(), e));
@@ -377,6 +388,11 @@ impl App {
             .collapsible(false)
             .show(ctx, |ui| {
             ui.label(RichText::new("OCR 需要「辨識引擎」與至少一個中英日語言包。下載的語言包存放在使用者資料夾，不需系統管理員權限。").color(ui.visuals().weak_text_color()));
+            ui.horizontal(|ui| {
+                ui.label("下載網站：");
+                ui.hyperlink_to(packs::DOWNLOAD_PAGE, packs::DOWNLOAD_PAGE)
+                    .on_hover_text("所有版本的 OCR 語言包都放在這裡；沒有網路的電腦可在別台下載 zip 後以「從檔案加入…」安裝");
+            });
             ui.add_space(4.0);
             egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
                 for info in &catalog {
@@ -411,6 +427,12 @@ impl App {
                             });
                         });
                         ui.label(RichText::new(format!("{}（安裝後 {}）", info.description, mb(info.total_size()))).color(ui.visuals().weak_text_color()));
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(format!("檔案：{}", info.url.rsplit('/').next().unwrap_or_default())).small().color(ui.visuals().weak_text_color()));
+                            ui.hyperlink_to(RichText::new("手動下載").small(), &info.url)
+                                .on_hover_text(format!("{}
+下載後以「從檔案加入…」安裝", info.url));
+                        });
                         if let Some((_, e)) = pm.error.as_ref().filter(|(id, _)| *id == info.id) {
                             ui.colored_label(ui.visuals().error_fg_color, format!("⚠ {e}"));
                         }
@@ -449,6 +471,7 @@ impl App {
         if fetch {
             pm.message = Some("正在取得語言包清單…".into());
             pm.error = None;
+            pm.quiet_fetch = false;
             pm.fetching = Some(std::thread::spawn(packs::fetch_manifest));
         }
         if import {
