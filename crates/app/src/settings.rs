@@ -47,6 +47,9 @@ pub struct Settings {
     /// 左側欄（頁面縮圖／書籤）
     pub sidebar: bool,
     pub sidebar_tab: SidebarTab,
+    /// 上次使用的 OCR 精度與額外語言
+    pub ocr_tier: String,
+    pub ocr_langs: Vec<String>,
 }
 
 impl Default for Settings {
@@ -58,6 +61,8 @@ impl Default for Settings {
             ruler_unit: RulerUnit::Millimeter,
             sidebar: true,
             sidebar_tab: SidebarTab::Pages,
+            ocr_tier: "std".into(),
+            ocr_langs: Vec::new(),
         }
     }
 }
@@ -84,6 +89,8 @@ impl Settings {
                 "rulers" => s.rulers = v != "0",
                 "sidebar" => s.sidebar = v != "0",
                 "sidebarTab" => s.sidebar_tab = SidebarTab::from_key(v),
+                "ocrTier" => s.ocr_tier = v.to_string(),
+                "ocrLangs" => s.ocr_langs = v.split(',').filter(|x| !x.is_empty()).map(str::to_string).collect(),
                 "rulerUnit" => {
                     if let Some(u) = RulerUnit::ALL.iter().find(|u| u.suffix() == v) {
                         s.ruler_unit = *u;
@@ -101,13 +108,15 @@ impl Settings {
             let _ = std::fs::create_dir_all(dir);
         }
         let text = format!(
-            "iconStyle={}\nbuttonStyle={}\nrulers={}\nrulerUnit={}\nsidebar={}\nsidebarTab={}\n",
+            "iconStyle={}\nbuttonStyle={}\nrulers={}\nrulerUnit={}\nsidebar={}\nsidebarTab={}\nocrTier={}\nocrLangs={}\n",
             self.icon_style.to_index(),
             self.button_mode.key(),
             if self.rulers { 1 } else { 0 },
             self.ruler_unit.suffix(),
             if self.sidebar { 1 } else { 0 },
-            self.sidebar_tab.key()
+            self.sidebar_tab.key(),
+            self.ocr_tier,
+            self.ocr_langs.join(",")
         );
         let _ = std::fs::write(p, text);
     }

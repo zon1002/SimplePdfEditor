@@ -1,0 +1,23 @@
+[package]
+name = "ocr"
+description = "文字辨識（PaddleOCR／ONNX Runtime）：語言包管理、下載與辨識流程"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# ONNX Runtime 以動態載入：只有安裝了 OCR 語言包（含 onnxruntime.dll）時才載入，主程式不受影響
+ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "load-dynamic", "api-22"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+# 下載語言包：使用 Windows 內建的 TLS（SChannel），不需 OpenSSL；支援系統 Proxy 設定
+ureq = { version = "3.4", default-features = false, features = ["native-tls", "win-system-proxy"] }
+# 從檔案加入語言包（zip）
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
+flate2 = { workspace = true }
+
+[dev-dependencies]
+pdfcore = { workspace = true }
+tiny-skia = { workspace = true }

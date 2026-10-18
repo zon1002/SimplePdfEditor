@@ -36,6 +36,8 @@ pub fn mark_bounds(m: &Mark) -> pdfcore::Rect {
             text_box_rect(m).expand(pad)
         }
         MarkType::Rect | MarkType::Ellipse => shape_rect(m).expand(m.width / 2.0 + 3.0),
+        // OCR 文字層看不見，不能選取
+        MarkType::Ocr => pdfcore::Rect::EMPTY,
         MarkType::Line | MarkType::Arrow => {
             let g = line_geometry(m);
             let pad = m.width.max(6.0) + 2.0;
@@ -59,6 +61,7 @@ fn hit(m: &Mark, p: Pt) -> bool {
             distance_to_segment(p, m.p1, m.p2) <= tol || line_geometry(m).heads.iter().any(|h| point_in_polygon(p, h))
         }
         MarkType::Text => text_box_rect(m).contains(p),
+        MarkType::Ocr => false,
         // 框中間鏤空：只有點在外框線附近才算選到
         MarkType::Rect | MarkType::Ellipse => {
             let tol = (8.0f64).max(m.width + 6.0) / 2.0;
@@ -70,6 +73,7 @@ fn hit(m: &Mark, p: Pt) -> bool {
 
 fn z_order(k: MarkType) -> u8 {
     match k {
+        MarkType::Ocr => 0,
         MarkType::Highlight => 1,
         MarkType::Underline => 2,
         MarkType::Rect | MarkType::Ellipse => 3,
@@ -719,7 +723,7 @@ impl App {
             }
             Drag::Selecting { start, quads, text } => {
                 let Some(doc) = &self.doc else { return };
-                let (q, t) = doc.select_text(self.page, *start, cur);
+                let (q, t) = crate::ocr_ui::select_on_page(doc, &self.model.marks, self.page, *start, cur);
                 *quads = q;
                 *text = t;
                 if quads.is_empty() {

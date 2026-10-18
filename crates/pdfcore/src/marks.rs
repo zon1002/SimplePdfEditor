@@ -18,6 +18,23 @@ pub enum MarkType {
     Rect,
     /// 橢圓／圓形框（中間鏤空）
     Ellipse,
+    /// OCR 辨識結果：看不見的文字層（可搜尋、選取、複製），每頁一個
+    Ocr,
+}
+
+/// OCR 辨識出的一個字：文字與四邊形（頁面座標，依閱讀方向的左上、右上、右下、左下）
+#[derive(Clone, Debug, PartialEq)]
+pub struct OcrGlyph {
+    pub text: String,
+    pub quad: Quad,
+}
+
+/// OCR 辨識出的一行
+#[derive(Clone, Debug, PartialEq)]
+pub struct OcrTextLine {
+    pub text: String,
+    pub confidence: f32,
+    pub glyphs: Vec<OcrGlyph>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -62,6 +79,9 @@ pub struct Mark {
     // Rect / Ellipse：p1、p2 為拖曳的兩個對角；width、dashed 等線型屬性與線條共用
     /// 矩形四角的圓弧半徑（pt），0 = 直角
     pub radius: f64,
+
+    /// OCR：辨識出的文字行
+    pub ocr: Vec<OcrTextLine>,
 }
 
 impl Default for Mark {
@@ -91,6 +111,7 @@ impl Default for Mark {
             dash_len: 6.0,
             gap_len: 4.0,
             radius: 0.0,
+            ocr: Vec::new(),
         }
     }
 }

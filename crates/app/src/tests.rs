@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT OR Apache-2.0
+﻿// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 不開視窗驅動整個主視窗的自動測試（egui_kittest）：以按鈕名稱點擊，與使用者操作相同。
@@ -390,4 +390,203 @@ fn screenshot_sidebar() {
         let img = h.render().expect("render");
         img.save(format!("{}/../../target/ui-sidebar-{name}.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
     }
+}
+
+// ---------------------------------------------------------------- 文字辨識（OCR）
+
+/// 開發時由 `ocr-packs build` 產生的語言包；沒有時略過 OCR 測試
+fn ocr_packs() -> Option<String> {
+    let d = format!("{}/../../target/ocr-packs", env!("CARGO_MANIFEST_DIR"));
+    if !std::path::Path::new(&d).join("std/pack.json").exists() {
+        eprintln!("略過：找不到 target/ocr-packs");
+        return None;
+    }
+    // SAFETY: 只在讀取語言包之前設定
+    unsafe { std::env::set_var("SPE_OCR_PACKS", &d) };
+    Some(d)
+}
+
+/// 模擬掃描檔：範例檔第 1 頁轉成 200 dpi 的圖片，沒有文字層
+fn scanned_pdf(name: &str) -> String {
+    use lopdf::{Object, Stream, dictionary};
+    let out = format!("{}/../../target/edit-mode-test", env!("CARGO_MANIFEST_DIR"));
+    std::fs::create_dir_all(&out).unwrap();
+    let out = format!("{out}/{name}.pdf");
+    let src = pdfcore::Document::open_file(&sample(), "").unwrap();
+    let (w, h) = src.page_size(0);
+    let img = src.render(0, 200.0 / 72.0).unwrap();
+    let rgb: Vec<u8> = img.rgba.chunks_exact(4).flat_map(|p| [p[0], p[1], p[2]]).collect();
+    let mut doc = lopdf::Document::with_version("1.7");
+    let mut st = Stream::new(
+        dictionary! { "Type" => "XObject", "Subtype" => "Image", "Width" => img.width as i64, "Height" => img.height as i64, "ColorSpace" => "DeviceRGB", "BitsPerComponent" => 8 },
+        rgb,
+    );
+    st.compress().unwrap();
+    let im = doc.add_object(st);
+    let content = doc.add_object(Stream::new(dictionary! {}, format!("q {w} 0 0 {h} 0 0 cm /Im0 Do Q").into_bytes()));
+    let pages = doc.new_object_id();
+    let page = doc.add_object(dictionary! {
+        "Type" => "Page", "Parent" => pages, "MediaBox" => vec![0.into(), 0.into(), Object::Real(w as f32), Object::Real(h as f32)],
+        "Contents" => content, "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => im } },
+    });
+    doc.objects.insert(pages, Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => vec![page.into()], "Count" => 1 }));
+    let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages });
+    doc.trailer.set("Root", catalog);
+    doc.save(&out).unwrap();
+    out
+}
+
+fn wait_ocr(h: &mut Harness<'static, App>) {
+    let t = std::time::Instant::now();
+    while h.state().ocr_job.is_some() {
+        assert!(t.elapsed().as_secs() < 120, "辨識逾時");
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        h.step();
+    }
+    h.run();
+}
+
+#[test]
+fn ocr_scanned_page_then_select_and_save_searchable_pdf() {
+    if ocr_packs().is_none() {
+        return;
+    }
+    let scan = scanned_pdf("scanned-save");
+    let mut app = App::new(0);
+    app.open_path(&scan);
+    assert!(app.doc.as_ref().unwrap().page_text(0).is_empty(), "掃描檔不應有文字層");
+    let mut h = harness(app);
+    h.run();
+    h.get_by_label("編輯").click();
+    h.run();
+    h.state_mut().open_ocr_dialog();
+    h.run();
+    // 對話框列出精度與說明
+    h.get_by_label_contains("標準（建議）");
+    h.get_by_label("開始辨識").click();
+    h.step();
+    assert!(h.state().ocr_job.is_some(), "應開始背景辨識");
+    wait_ocr(&mut h);
+
+    let app = h.state();
+    let ocr: Vec<_> = app.model.marks.iter().filter(|m| m.kind == MarkType::Ocr).collect();
+    assert_eq!(ocr.len(), 1, "一頁一個 OCR 結果");
+    let all: String = ocr[0].ocr.iter().map(|l| l.text.as_str()).collect::<Vec<_>>().join("\n");
+    assert!(all.contains("quick brown fox"), "{all}");
+    assert!(all.contains("中文測試"), "{all}");
+    assert!(app.model.dirty);
+
+    // 存檔前就能以 OCR 結果選取文字（拖過整頁）
+    let doc = app.doc.as_ref().unwrap();
+    let (w, hh) = doc.page_size(0);
+    let (quads, text) = crate::ocr_ui::select_on_page(doc, &app.model.marks, 0, Pt::new(0.0, 0.0), Pt::new(w, hh));
+    assert!(!quads.is_empty() && text.contains("quick brown fox"), "{text}");
+
+    // 另存後：外觀不變、有可搜尋的文字層
+    let out = format!("{}/../../target/edit-mode-test/ocr-saved.pdf", env!("CARGO_MANIFEST_DIR"));
+    let before = doc.render(0, 1.0).unwrap();
+    assert!(h.state_mut().save_to_path(&out));
+    let saved = pdfcore::Document::open_file(&out, "").unwrap();
+    let t = saved.page_text(0).plain_text();
+    assert!(t.contains("quick brown fox") && t.contains("中文測試"), "{t}");
+    assert!(!saved.page_text(0).find("lazy dog").is_empty());
+    let after = saved.render(0, 1.0).unwrap();
+    assert_eq!(before.rgba, after.rgba, "文字層必須看不見");
+}
+
+#[test]
+fn ocr_is_undone_in_one_step_and_rerun_replaces_page_result() {
+    if ocr_packs().is_none() {
+        return;
+    }
+    let mut app = App::new(0);
+    app.open_path(&scanned_pdf("scanned-undo"));
+    let mut h = harness(app);
+    h.run();
+    h.get_by_label("編輯").click();
+    h.run();
+    for _ in 0..2 {
+        h.state_mut().open_ocr_dialog();
+        h.run();
+        assert!(h.state().ocr_dialog.is_some(), "dialog {:?} job {}", h.state().status, h.state().ocr_job.is_some());
+        h.get_by_label("開始辨識").click();
+        h.step();
+        wait_ocr(&mut h);
+    }
+    let n = |h: &Harness<'static, App>| h.state().model.marks.iter().filter(|m| m.kind == MarkType::Ocr).count();
+    assert_eq!(n(&h), 1, "重新辨識應取代同一頁的結果");
+    h.state_mut().undo();
+    assert_eq!(n(&h), 1, "復原一次回到第一次辨識的結果");
+    h.state_mut().undo();
+    assert_eq!(n(&h), 0);
+}
+
+#[test]
+fn skip_pages_that_already_have_text() {
+    if ocr_packs().is_none() {
+        return;
+    }
+    let mut h = harness(opened());
+    h.run();
+    h.get_by_label("編輯").click();
+    h.run();
+    h.state_mut().open_ocr_dialog();
+    h.run();
+    h.get_by_label("開始辨識").click();
+    h.step();
+    wait_ocr(&mut h);
+    assert!(h.state().model.marks.is_empty(), "已有文字的頁面預設略過");
+    assert!(!h.state().model.dirty);
+}
+
+#[test]
+fn ocr_needs_edit_mode_and_pack_manager_lists_packs() {
+    if ocr_packs().is_none() {
+        return;
+    }
+    let mut h = harness(opened());
+    h.run();
+    h.state_mut().open_ocr_dialog();
+    h.run();
+    assert!(h.state().ocr_dialog.is_none(), "檢視模式不能辨識");
+    h.state_mut().open_pack_manager();
+    h.run();
+    h.get_by_label("OCR 語言管理");
+    h.get_by_label("從檔案加入…");
+    h.get_by_label_contains("日文　高精度");
+    h.get_by_label("韓文");
+}
+
+#[test]
+#[ignore]
+fn screenshot_ocr() {
+    if ocr_packs().is_none() {
+        return;
+    }
+    let shot = |h: &mut Harness<'static, App>, name: &str| {
+        let img = h.render().expect("render");
+        img.save(format!("{}/../../target/ui-ocr-{name}.png", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    };
+    let mut app = App::new(0);
+    app.open_path(&scanned_pdf("scanned-shot"));
+    let mut h = harness(app);
+    crate::setup_fonts(&h.ctx);
+    h.run();
+    h.get_by_label("編輯").click();
+    h.run();
+    h.state_mut().open_ocr_dialog();
+    h.run_steps(4);
+    shot(&mut h, "dialog");
+    h.get_by_label("開始辨識").click();
+    h.run_steps(3);
+    shot(&mut h, "progress");
+    wait_ocr(&mut h);
+    // 以高亮工具沿著辨識出的文字拖曳
+    h.state_mut().set_tool(Tool::Highlight);
+    drag(&mut h, Pt::new(60.0, 50.0), Pt::new(400.0, 130.0), false);
+    h.run_steps(3);
+    shot(&mut h, "selected");
+    h.state_mut().open_pack_manager();
+    h.run_steps(4);
+    shot(&mut h, "packs");
 }

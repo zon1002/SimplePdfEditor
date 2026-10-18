@@ -23,41 +23,58 @@
 | [rfd](https://github.com/PolyMeilex/rfd) | 開啟／存檔對話框 | MIT |
 | [windows-rs](https://github.com/microsoft/windows-rs) | Win32 API（列印、檔案總管外掛） | MIT OR Apache-2.0 |
 | hayro 內建資料 | Foxit 替代字型（取自 PDFium，BSD-3-Clause）、CMYK 色彩描述檔（Compact-ICC-Profiles，CC0-1.0），嵌入執行檔供未內嵌字型的 PDF 使用 | 見授權原文 |
+| [ort](https://github.com/pykeio/ort) | 載入 ONNX Runtime 執行 OCR 模型 | MIT OR Apache-2.0 |
+| [ureq](https://github.com/algesten/ureq)、native-tls | 下載 OCR 語言包（使用 Windows 內建的 TLS 與憑證） | MIT OR Apache-2.0 |
+| [zip](https://github.com/zip-rs/zip2)、sha2 | 解壓並驗證 OCR 語言包 | MIT |
 | egui 內建字型（epaint_default_fonts） | Ubuntu-Light（Ubuntu Font Licence 1.0）、Hack、Noto Emoji（SIL OFL 1.1）、emoji-icon-font（MIT） | 見授權原文 |
 
 介面中文字型使用 Windows 內建的「微軟正黑體」，於執行時從系統字型資料夾讀取，**不隨程式散布**。
 新增文字時嵌入 PDF 的字型子集，來自使用者電腦上的字型，其嵌入權限依該字型的授權。
 
-## 完整套件清單（232 個）
+## OCR 語言包（選用，另行下載或由安裝程式安裝）
+
+文字辨識的模型與執行環境**不編譯進執行檔**，而是以語言包形式安裝於 `{程式資料夾}\ocr\packs\` 或
+`%LOCALAPPDATA%\SimplePdfEditor\ocr\packs\`；每個語言包內附各自的授權原文。
+
+| 元件 | 用途 | 授權 |
+|------|------|------|
+| [ONNX Runtime](https://github.com/microsoft/onnxruntime) 1.31.0（`onnxruntime.dll`，Microsoft 官方發行檔） | 執行 OCR 模型 | MIT（附 `ThirdPartyNotices-onnxruntime.txt`） |
+| [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) PP-OCRv6 / PP-OCRv5 模型 | 文字偵測、方向判斷、文字辨識 | Apache-2.0 |
+| [RapidOCR](https://github.com/RapidAI/RapidOCR) | 上述模型的 ONNX 轉換版本（ModelScope 發布） | Apache-2.0 |
+
+## 完整套件清單（246 個）
 
 | 套件 | 版本 | 授權 |
 |------|------|------|
 | accesskit | 0.24.1 | MIT OR Apache-2.0 |
 | adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
 | aes | 0.9.3 | MIT OR Apache-2.0 |
-| ahash | 0.8.12 | MIT OR Apache-2.0 |
+| ahash | 0.8.12 | MIT OR Apache-2.0 (*) |
 | alloc-no-stdlib | 2.0.4 | BSD-3-Clause |
-| alloc-stdlib | 0.2.4 | BSD-3-Clause |
+| alloc-stdlib | 0.2.4 | BSD-3-Clause (*) |
 | allocator-api2 | 0.2.21 | MIT OR Apache-2.0 |
 | arboard | 3.6.1 | MIT OR Apache-2.0 |
 | arrayref | 0.3.9 | BSD-2-Clause |
 | arrayvec | 0.7.8 | MIT OR Apache-2.0 |
-| ash | 0.38.0+1.3.281 | MIT OR Apache-2.0 |
-| bit-set | 0.10.0 | Apache-2.0 OR MIT |
+| ash | 0.38.0+1.3.281 | MIT OR Apache-2.0 (*) |
+| base64 | 0.23.1 | MIT OR Apache-2.0 |
+| base64ct | 1.8.3 | Apache-2.0 OR MIT |
+| bit-set | 0.10.0 | Apache-2.0 OR MIT (*) |
 | bit-vec | 0.9.1 | Apache-2.0 OR MIT |
 | bitflags | 1.3.2 | MIT/Apache-2.0 |
 | bitflags | 2.13.2 | MIT OR Apache-2.0 |
 | block-buffer | 0.12.1 | MIT OR Apache-2.0 |
 | block-padding | 0.4.2 | MIT OR Apache-2.0 |
 | brotli | 8.0.4 | BSD-3-Clause AND MIT |
-| brotli-decompressor | 5.0.3 | BSD-3-Clause/MIT |
-| bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
+| brotli-decompressor | 5.0.3 | BSD-3-Clause/MIT (*) |
+| bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT (*) |
 | bytemuck_derive | 1.12.1 | Zlib OR Apache-2.0 OR MIT |
 | byteorder-lite | 0.1.0 | Unlicense OR MIT |
+| bytes | 1.12.1 | MIT |
 | cbc | 0.2.1 | MIT OR Apache-2.0 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
 | chacha20 | 0.10.2 | MIT OR Apache-2.0 |
-| cipher | 0.5.2 | MIT OR Apache-2.0 |
+| cipher | 0.5.2 | MIT OR Apache-2.0 (*) |
 | clipboard-win | 5.4.1 | BSL-1.0 |
 | codespan-reporting | 0.13.1 | Apache-2.0 |
 | color | 0.3.3 | Apache-2.0 OR MIT |
@@ -65,50 +82,48 @@
 | core_detect | 1.0.0 | MIT/Apache-2.0 |
 | cpubits | 0.1.1 | MIT OR Apache-2.0 |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 |
-| crc32fast | 1.5.2 | MIT OR Apache-2.0 |
-| crypto-common | 0.2.2 | MIT OR Apache-2.0 |
+| crc32fast | 1.5.2 | MIT OR Apache-2.0 (*) |
+| crypto-common | 0.2.2 | MIT OR Apache-2.0 (*) |
 | cursor-icon | 1.2.0 | MIT OR Apache-2.0 OR Zlib |
-| digest | 0.11.3 | MIT OR Apache-2.0 |
-| document-features | 0.2.12 | MIT OR Apache-2.0 |
+| der | 0.8.2 | Apache-2.0 OR MIT |
+| digest | 0.11.3 | MIT OR Apache-2.0 (*) |
+| document-features | 0.2.12 | MIT OR Apache-2.0 (*) |
 | dpi | 0.1.2 | Apache-2.0 AND MIT |
 | ecb | 0.2.1 | MIT OR Apache-2.0 |
 | ecolor | 0.36.2 | MIT OR Apache-2.0 |
 | eframe | 0.36.2 | MIT OR Apache-2.0 |
-| egui | 0.36.2 | MIT OR Apache-2.0 |
+| egui | 0.36.2 | MIT OR Apache-2.0 (*) |
 | egui-wgpu | 0.36.2 | MIT OR Apache-2.0 |
 | egui-winit | 0.36.2 | MIT OR Apache-2.0 |
 | egui_glow | 0.36.2 | MIT OR Apache-2.0 |
 | either | 1.19.0 | MIT OR Apache-2.0 |
-| emath | 0.36.2 | MIT OR Apache-2.0 |
+| emath | 0.36.2 | MIT OR Apache-2.0 (*) |
 | encoding_rs | 0.8.42 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
-| epaint | 0.36.2 | MIT OR Apache-2.0 |
+| epaint | 0.36.2 | MIT OR Apache-2.0 (*) |
 | epaint_default_fonts | 0.36.2 | (MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0 |
 | equivalent | 1.0.2 | Apache-2.0 OR MIT |
 | error-code | 3.4.0 | BSL-1.0 |
 | euclid | 0.22.14 | MIT OR Apache-2.0 |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT |
-| fax | 0.2.7 | MIT |
-| fdeflate | 0.3.7 | MIT OR Apache-2.0 |
+| fdeflate | 0.3.7 | MIT OR Apache-2.0 (*) |
 | fearless_simd | 0.4.1 | Apache-2.0 OR MIT |
-| flate2 | 1.1.10 | MIT OR Apache-2.0 |
+| flate2 | 1.1.10 | MIT OR Apache-2.0 (*) |
 | foldhash | 0.2.0 | Zlib |
-| font-types | 0.11.3 | MIT OR Apache-2.0 |
-| font-types | 0.12.6 | MIT OR Apache-2.0 |
+| font-types | 0.11.3 | MIT OR Apache-2.0 (*) |
+| font-types | 0.12.6 | MIT OR Apache-2.0 (*) |
 | getrandom | 0.3.4 | MIT OR Apache-2.0 |
-| getrandom | 0.4.3 | MIT OR Apache-2.0 |
-| glifo | 0.1.1 | Apache-2.0 OR MIT |
-| glifo | 0.2.0 | Apache-2.0 OR MIT |
+| getrandom | 0.4.3 | MIT OR Apache-2.0 (*) |
 | glow | 0.17.0 | MIT OR Apache-2.0 OR Zlib |
-| glutin | 0.32.3 | Apache-2.0 |
+| glutin | 0.32.3 | Apache-2.0 (*) |
 | glutin-winit | 0.5.0 | MIT |
 | glutin_egl_sys | 0.7.1 | Apache-2.0 |
 | glutin_wgl_sys | 0.6.1 | Apache-2.0 |
 | gpu-allocator | 0.28.0 | MIT OR Apache-2.0 |
-| guillotiere | 0.7.0 | MIT/Apache-2.0 |
+| guillotiere | 0.7.0 | MIT/Apache-2.0 (*) |
 | half | 2.7.1 | MIT OR Apache-2.0 |
 | harfrust | 0.12.0 | MIT |
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 |
-| hashbrown | 0.17.1 | MIT OR Apache-2.0 |
+| hashbrown | 0.17.1 | MIT OR Apache-2.0 (*) |
 | hayro | 0.7.1 | Apache-2.0 OR MIT |
 | hayro-ccitt | 0.3.0 | Apache-2.0 OR MIT |
 | hayro-cmap | 0.1.0 | Apache-2.0 OR MIT |
@@ -116,17 +131,20 @@
 | hayro-jbig2 | 0.3.0 | Apache-2.0 OR MIT |
 | hayro-jpeg2000 | 0.3.5 | Apache-2.0 OR MIT |
 | hayro-postscript | 0.1.0 | Apache-2.0 OR MIT |
-| hayro-syntax | 0.7.2 | Apache-2.0 OR MIT |
-| hybrid-array | 0.4.15 | MIT OR Apache-2.0 |
-| image | 0.25.10 | MIT OR Apache-2.0 |
-| indexmap | 2.14.2 | Apache-2.0 OR MIT |
+| hayro-syntax | 0.7.2 | Apache-2.0 OR MIT (*) |
+| http | 1.5.0 | MIT OR Apache-2.0 |
+| httparse | 1.10.1 | MIT OR Apache-2.0 |
+| hybrid-array | 0.4.15 | MIT OR Apache-2.0 (*) |
+| image | 0.25.10 | MIT OR Apache-2.0 (*) |
+| indexmap | 2.14.2 | Apache-2.0 OR MIT (*) |
 | inout | 0.2.2 | MIT OR Apache-2.0 |
 | itertools | 0.15.0 | MIT OR Apache-2.0 |
 | itoa | 1.0.18 | MIT OR Apache-2.0 |
 | khronos-egl | 6.0.0 | MIT/Apache-2.0 |
-| kurbo | 0.13.1 | Apache-2.0 OR MIT |
+| kurbo | 0.13.1 | Apache-2.0 OR MIT (*) |
 | libc | 0.2.190 | MIT OR Apache-2.0 |
-| libloading | 0.8.9 | ISC |
+| libloading | 0.8.9 | ISC (*) |
+| libloading | 0.9.0 | ISC |
 | libm | 0.2.16 | MIT |
 | linebender_resource_handle | 0.1.1 | Apache-2.0 OR MIT |
 | litrs | 1.0.1 | MIT OR Apache-2.0 |
@@ -135,20 +153,25 @@
 | lopdf | 0.45.0 | MIT |
 | md-5 | 0.11.0 | MIT OR Apache-2.0 |
 | memchr | 2.8.3 | Unlicense OR MIT |
-| miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
+| miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 (*) |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
-| moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
+| moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 (*) |
 | multiversion_no_op | 1.0.0 | Apache-2.0 OR MIT |
-| naga | 30.0.1 | MIT OR Apache-2.0 |
-| naga-types | 30.0.1 | MIT OR Apache-2.0 |
+| naga | 30.0.1 | MIT OR Apache-2.0 (*) |
+| naga-types | 30.0.1 | MIT OR Apache-2.0 (*) |
+| native-tls | 0.2.18 | MIT OR Apache-2.0 |
 | nohash-hasher | 0.2.0 | Apache-2.0 OR MIT |
 | nom | 8.0.0 | MIT |
-| num-traits | 0.2.19 | MIT OR Apache-2.0 |
+| num-traits | 0.2.19 | MIT OR Apache-2.0 (*) |
 | once_cell | 1.21.4 | MIT OR Apache-2.0 |
 | ordered-float | 5.5.0 | MIT |
-| parking_lot | 0.12.5 | MIT OR Apache-2.0 |
+| ort | 2.0.0-rc.14 | MIT OR Apache-2.0 |
+| ort-sys | 2.0.0-rc.14 | MIT OR Apache-2.0 |
+| parking_lot | 0.12.5 | MIT OR Apache-2.0 (*) |
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 |
-| peniko | 0.6.1 | Apache-2.0 OR MIT |
+| pem-rfc7468 | 1.0.0 | Apache-2.0 OR MIT |
+| peniko | 0.6.1 | Apache-2.0 OR MIT (*) |
+| percent-encoding | 2.3.2 | MIT OR Apache-2.0 |
 | phf | 0.13.1 | MIT |
 | phf_generator | 0.13.1 | MIT |
 | phf_macros | 0.13.1 | MIT |
@@ -156,33 +179,35 @@
 | pic-scale | 0.7.12 | BSD-3-Clause OR Apache-2.0 |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
 | png | 0.17.16 | MIT OR Apache-2.0 |
-| png | 0.18.1 | MIT OR Apache-2.0 |
+| png | 0.18.1 | MIT OR Apache-2.0 (*) |
 | pollster | 1.0.1 | Apache-2.0/MIT |
 | polycool | 0.4.0 | MIT OR Apache-2.0 |
 | presser | 0.3.1 | MIT OR Apache-2.0 |
-| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
+| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 (*) |
 | profiling | 1.0.18 | MIT OR Apache-2.0 |
 | pxfm | 0.1.30 | BSD-3-Clause OR Apache-2.0 |
-| quick-error | 2.0.1 | MIT/Apache-2.0 |
-| quote | 1.0.47 | MIT OR Apache-2.0 |
+| quote | 1.0.47 | MIT OR Apache-2.0 (*) |
 | rand | 0.10.3 | MIT OR Apache-2.0 |
 | rand_core | 0.10.1 | MIT OR Apache-2.0 |
 | range-alloc | 0.1.5 | MIT OR Apache-2.0 |
 | rangemap | 1.8.0 | MIT/Apache-2.0 |
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib |
-| read-fonts | 0.39.2 | MIT OR Apache-2.0 |
-| read-fonts | 0.41.0 | MIT OR Apache-2.0 |
+| read-fonts | 0.39.2 | MIT OR Apache-2.0 (*) |
+| read-fonts | 0.41.0 | MIT OR Apache-2.0 (*) |
 | read-fonts | 0.44.0 | MIT OR Apache-2.0 |
 | renderdoc-sys | 1.1.0 | MIT OR Apache-2.0 |
 | rfd | 0.17.2 | MIT |
 | rustc-hash | 1.1.0 | Apache-2.0/MIT |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT |
+| rustls-pki-types | 1.15.1 | MIT OR Apache-2.0 (*) |
+| schannel | 0.1.30 | MIT |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 |
 | self_cell | 1.3.0 | Apache-2.0 OR GPL-2.0-only |
 | serde | 1.0.229 | MIT OR Apache-2.0 |
 | serde_core | 1.0.229 | MIT OR Apache-2.0 |
 | serde_derive | 1.0.229 | MIT OR Apache-2.0 |
-| sha2 | 0.11.1 | MIT OR Apache-2.0 |
+| serde_json | 1.0.154 | MIT OR Apache-2.0 |
+| sha2 | 0.11.1 | MIT OR Apache-2.0 (*) |
 | simd-adler32 | 0.3.10 | MIT |
 | simdutf8 | 0.1.5 | MIT OR Apache-2.0 |
 | siphasher | 1.0.4 | MIT OR Apache-2.0 |
@@ -195,22 +220,21 @@
 | stable_deref_trait | 1.2.1 | MIT OR Apache-2.0 |
 | static_assertions | 1.1.0 | MIT OR Apache-2.0 |
 | strict-num | 0.1.1 | MIT |
-| stringprep | 0.1.5 | MIT/Apache-2.0 |
+| stringprep | 0.1.5 | MIT/Apache-2.0 (*) |
 | subsetter | 0.2.6 | MIT OR Apache-2.0 |
-| syn | 2.0.119 | MIT OR Apache-2.0 |
-| syn | 3.0.9 | MIT OR Apache-2.0 |
-| synstructure | 0.14.0 | MIT |
-| termcolor | 1.4.1 | Unlicense OR MIT |
-| thiserror | 2.0.21 | MIT OR Apache-2.0 |
+| syn | 2.0.119 | MIT OR Apache-2.0 (*) |
+| syn | 3.0.9 | MIT OR Apache-2.0 (*) |
+| synstructure | 0.14.0 | MIT (*) |
+| thiserror | 2.0.21 | MIT OR Apache-2.0 (*) |
 | thiserror-impl | 2.0.21 | MIT OR Apache-2.0 |
-| tiff | 0.11.3 | MIT |
-| tiny-skia | 0.11.4 | BSD-3-Clause |
+| tiny-skia | 0.11.4 | BSD-3-Clause (*) |
 | tiny-skia-path | 0.11.4 | BSD-3-Clause |
 | tinyvec | 1.13.3 | Zlib OR Apache-2.0 OR MIT |
 | tracing | 0.1.44 | MIT |
 | tracing-core | 0.1.36 | MIT |
 | ttf-parser | 0.25.1 | MIT OR Apache-2.0 |
 | type-map | 0.5.1 | MIT/Apache-2.0 |
+| typed-path | 0.12.3 | MIT OR Apache-2.0 |
 | typenum | 1.20.1 | MIT OR Apache-2.0 |
 | unicode-bidi | 0.3.18 | MIT OR Apache-2.0 |
 | unicode-general-category | 1.1.0 | Apache-2.0 |
@@ -219,48 +243,52 @@
 | unicode-properties | 0.1.4 | MIT/Apache-2.0 |
 | unicode-segmentation | 1.13.3 | MIT OR Apache-2.0 |
 | unicode-width | 0.2.2 | MIT OR Apache-2.0 |
+| ureq | 3.4.2 | MIT OR Apache-2.0 |
+| ureq-proto | 0.6.5 | MIT OR Apache-2.0 |
+| utf8-zero | 0.8.1 | MIT OR Apache-2.0 |
 | uuid | 1.28.0 | Apache-2.0 OR MIT |
 | vello_common | 0.0.8 | Apache-2.0 OR MIT |
-| vello_common | 0.0.9 | Apache-2.0 OR MIT |
 | vello_common | 0.1.0 | Apache-2.0 OR MIT |
 | vello_cpu | 0.0.8 | Apache-2.0 OR MIT |
 | vello_cpu | 0.1.0 | Apache-2.0 OR MIT |
 | web-time | 1.1.0 | MIT OR Apache-2.0 |
-| weezl | 0.1.12 | MIT OR Apache-2.0 |
+| webpki-root-certs | 1.0.9 | CDLA-Permissive-2.0 |
 | weezl | 0.2.1 | MIT OR Apache-2.0 |
 | wgpu | 30.0.1 | MIT OR Apache-2.0 |
 | wgpu-core | 30.0.1 | MIT OR Apache-2.0 |
 | wgpu-core-deps-windows-linux-android | 30.0.1 | MIT OR Apache-2.0 |
-| wgpu-hal | 30.0.1 | MIT OR Apache-2.0 |
-| wgpu-naga-bridge | 30.0.1 | MIT OR Apache-2.0 |
-| wgpu-types | 30.0.1 | MIT OR Apache-2.0 |
-| winapi-util | 0.1.11 | Unlicense OR MIT |
-| windows | 0.62.2 | MIT OR Apache-2.0 |
+| wgpu-hal | 30.0.1 | MIT OR Apache-2.0 (*) |
+| wgpu-naga-bridge | 30.0.1 | MIT OR Apache-2.0 (*) |
+| wgpu-types | 30.0.1 | MIT OR Apache-2.0 (*) |
+| windows | 0.62.2 | MIT OR Apache-2.0 (*) |
 | windows-collections | 0.3.2 | MIT OR Apache-2.0 |
-| windows-core | 0.62.2 | MIT OR Apache-2.0 |
+| windows-core | 0.62.2 | MIT OR Apache-2.0 (*) |
 | windows-future | 0.3.2 | MIT OR Apache-2.0 |
 | windows-implement | 0.60.2 | MIT OR Apache-2.0 |
 | windows-interface | 0.59.3 | MIT OR Apache-2.0 |
 | windows-link | 0.2.1 | MIT OR Apache-2.0 |
 | windows-numerics | 0.3.1 | MIT OR Apache-2.0 |
-| windows-result | 0.4.1 | MIT OR Apache-2.0 |
+| windows-result | 0.4.1 | MIT OR Apache-2.0 (*) |
 | windows-strings | 0.5.1 | MIT OR Apache-2.0 |
-| windows-sys | 0.52.0 | MIT OR Apache-2.0 |
+| windows-sys | 0.52.0 | MIT OR Apache-2.0 (*) |
 | windows-sys | 0.60.2 | MIT OR Apache-2.0 |
-| windows-sys | 0.61.2 | MIT OR Apache-2.0 |
+| windows-sys | 0.61.2 | MIT OR Apache-2.0 (*) |
 | windows-targets | 0.52.6 | MIT OR Apache-2.0 |
 | windows-targets | 0.53.5 | MIT OR Apache-2.0 |
 | windows-threading | 0.2.1 | MIT OR Apache-2.0 |
 | windows_x86_64_msvc | 0.52.6 | MIT OR Apache-2.0 |
 | windows_x86_64_msvc | 0.53.1 | MIT OR Apache-2.0 |
-| winit | 0.30.13 | Apache-2.0 |
+| winit | 0.30.13 | Apache-2.0 (*) |
+| winreg | 0.56.0 | MIT |
 | write-fonts | 0.48.1 | MIT OR Apache-2.0 |
 | yoke | 0.8.3 | Unicode-3.0 |
 | yoke-derive | 0.8.4 | Unicode-3.0 |
-| zerocopy | 0.8.62 | BSD-2-Clause OR Apache-2.0 OR MIT |
+| zerocopy | 0.8.62 | BSD-2-Clause OR Apache-2.0 OR MIT (*) |
 | zerocopy-derive | 0.8.62 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | zerofrom | 0.1.8 | Unicode-3.0 |
 | zerofrom-derive | 0.1.8 | Unicode-3.0 |
-| zlib-rs | 0.6.8 | Zlib |
+| zeroize | 1.9.1 | Apache-2.0 OR MIT |
+| zip | 9.0.5 | MIT |
+| zmij | 1.0.23 | MIT |
 | zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
 | zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib |

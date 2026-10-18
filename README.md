@@ -1,20 +1,24 @@
 # 簡易 PDF 編輯器（SimplePdfEditor）— Rust 版
 
-Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.1）。
+Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.4.0）。
 由 C++17 / Qt6 / MuPDF 的 [v1.6.0](../SimplePdfEditor) 改寫，功能維持不變，架構參考 [PdfCraft](https://github.com/storytold/pdfcraft)
 （同為純 Rust 的 PDF 工具：使用相同的 hayro 渲染、lopdf 存檔與 egui 介面，並沿用其修補版本與文字擷取模組）。
 
 **安裝時不需要任何額外套件**：C 執行環境靜態連結，程式只有 `SimplePdfEditor.exe` 與檔案總管外掛
 `SimplePdfPreview.dll` 兩個檔案，不需安裝 Microsoft Visual C++ 可轉發套件，也沒有 Qt 等 DLL。
+選用的文字辨識（OCR）以語言包形式安裝在程式資料夾的 `ocr\` 內，不會安裝任何系統元件。
 
 ## 下載
 
-`dist/` 內為 v2.3.1 發行版：
+`dist/` 內為 v2.4.0 發行版：
 
 | 檔案 | 說明 |
 |------|------|
-| `SimplePdfEditor_Setup_v2.3.1.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
-| `SimplePdfEditor_v2.3.1_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+| `SimplePdfEditor_Setup_v2.4.0.exe` | 安裝程式（離線版）：內含 OCR 辨識引擎與中英日標準語言包；可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑 |
+| `SimplePdfEditor_Setup_v2.4.0_Online.exe` | 安裝程式（線上版）：功能相同、檔案較小，勾選的 OCR 語言包在安裝時下載 |
+| `SimplePdfEditor_v2.4.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合；OCR 語言包可在程式內下載） |
+
+OCR 語言包（zip）與清單 `ocr-packs.json` 放在 GitHub Releases 的 `ocr-packs-v1`，程式與線上版安裝程式從那裡下載。
 
 ## 功能
 
@@ -49,6 +53,20 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.1）。
   滑鼠位置標示在尺規上並於狀態列顯示座標；僅供對位，不會寫入 PDF 或列印。
 - **檔案總管整合**（安裝時可選）：檔案總管預覽窗格（Alt+P）可捲動瀏覽 PDF 所有頁面，大圖示檢視以第 1 頁作為縮圖；
   安裝時備份原本的 PDF 預覽／縮圖程式，解除安裝時還原。外掛為獨立的 `SimplePdfPreview.dll`（見 `crates/shellext/`）。
+- **文字辨識（OCR）**（工具 → 文字辨識 (OCR)…，編輯模式）：辨識掃描頁面，加上**看不見的文字層**，
+  頁面外觀不變，但可以搜尋、選取、複製，也能沿著文字高亮、加底線（存檔前就能使用，另存後在其他閱讀器中同樣可搜尋）。
+  使用 PaddleOCR 模型與 ONNX Runtime，完全在本機執行、不上傳資料。可選頁面範圍、預設略過已有文字的頁面、可取消；
+  整次辨識為一個復原步驟。精度與語言：
+
+  | 語言包 | 正確率（清晰文件） | 速度（每頁） | 下載 |
+  |--------|------|------|------|
+  | 中英日　標準（建議，PP-OCRv6 small） | 約 96–100% | 2–3 秒 | 25 MB |
+  | 中英日　高精度（PP-OCRv6 medium） | 小字稍好 | 40–100 秒 | 101 MB |
+  | 中英日　最高精度（PP-OCRv5 server） | 約 100%；模糊繁體易誤為簡體 | 約 50 秒 | 149 MB |
+  | 韓文、拉丁語系（法、德、西、義、葡等） | — | 與標準相近 | 各 7–8 MB |
+
+  另需「OCR 辨識引擎」（ONNX Runtime 與方向判斷模型，7 MB）。語言包可在安裝時勾選，或之後在
+  **工具 → OCR 語言管理** 下載、**從檔案加入**（離線電腦）、移除，也可重新執行安裝程式加裝。
 - 復原 / 取消復原（Ctrl+Z / Ctrl+Y）、Ctrl+滾輪縮放、PgUp/PgDn 換頁、拖放 PDF 開啟、開啟加密 PDF。
 - Ctrl+C 複製最後一次高亮／底線所選取的文字。
 - **說明**（F1，或工具列右側「說明」按鈕）：詳細使用說明；「說明 → 關於」顯示版本與授權資訊。
@@ -61,6 +79,8 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.3.1）。
 
 - 高亮、底線、線條、箭頭、矩形、圓形 → 標準 PDF 註解（Highlight / Underline / Line / Square / Circle），其他閱讀器仍可編輯或刪除。
   外觀串流由程式自行繪製（高亮以相乘混色、線條支援可調箭頭大小與虛線），存檔結果與編輯畫面一致。
+- OCR 結果 → 看不見的文字層（文字繪製模式 3，Type0／Identity-H，CID 即 Unicode，搭配一個只有空白字形的極小 TrueType 字型），
+  每個字依辨識出的四邊形定位（可旋轉、傾斜），選取範圍與原圖上的字吻合。
 - 文字 → 寫入頁面內容（Form XObject）並嵌入字型**子集**（Type0／Identity-H，只含用到的字形，附 ToUnicode 可複製搜尋）；
   外框與背景一併畫入，位置與編輯畫面相同。
 - 加密使用 PDF 2.0 的 AES-256（V5 / R6）。
@@ -87,9 +107,15 @@ target\release\shellext_test.exe target\release\SimplePdfPreview.dll test\sample
 打包：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置並整理 publish\（含煙霧測試、檢查不依賴 VC++ 執行環境）
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.2.1.exe
+powershell -ExecutionPolicy Bypass -File publish.ps1
 ```
+
+依序：建置並整理 `publish\`（含煙霧測試、檢查不依賴 VC++ 執行環境）→ 準備 OCR 語言包 `target\ocr-packs\`
+（沒有時以 `cargo run -p ocr --bin ocr-packs -- fetch / build` 從 ModelScope、Microsoft 下載上游檔案並驗證 SHA-256 後建置）→
+以 Inno Setup 6 產生 `dist\SimplePdfEditor_Setup_v2.4.0.exe`（離線版）與 `…_Online.exe`（線上版，`ISCC /DOnline`）。
+`target\ocr-packs\` 內的 `ocr-*.zip` 與 `ocr-packs.json` 要上傳到 GitHub Releases 的 `ocr-packs-v1`。
+
+OCR 測試（`crates/ocr/tests`、介面測試中的 OCR 流程）需要 `target\ocr-packs\`，沒有時自動略過。
 
 安裝程式沿用 v1.x 的 AppId，可直接覆蓋升級，並移除舊版的 Qt／MuPDF DLL。
 
@@ -113,6 +139,10 @@ powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置
 | `crates/app/src/print.rs`、`preview.rs` | Win32 列印與列印預覽 |
 | `crates/app/src/sidebar.rs` | 左側欄：頁面縮圖與書籤 |
 | `crates/app/src/help.rs` | 使用說明與關於視窗 |
+| `crates/app/src/ocr_ui.rs` | 文字辨識對話框、背景辨識與進度、OCR 語言管理 |
+| `crates/ocr/src/engine.rs` | OCR 流程：文字偵測（DB）、旋轉框、方向判斷、CTC 辨識與每個字的位置、閱讀順序 |
+| `crates/ocr/src/packs.rs` | 語言包清單、安裝位置、下載與驗證、從 zip 加入 |
+| `crates/ocr/src/bin/ocr-packs.rs` | 開發工具：下載上游模型並建置語言包 zip 與 `ocr/ocr-packs.json` |
 | `crates/shellext/` | 檔案總管外掛：預覽處理常式、縮圖提供者（COM DLL）與測試程式 |
 | `vendor/` | PdfCraft 修補過的 hayro、lopdf（見 `vendor/README.md`） |
 

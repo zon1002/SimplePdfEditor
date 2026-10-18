@@ -14,6 +14,7 @@ mod bars;
 mod dialogs;
 mod help;
 mod icons;
+mod ocr_ui;
 mod preview;
 mod print;
 mod ruler;
@@ -140,6 +141,9 @@ impl App {
         }
         dialogs::show(self, &ctx);
         dialogs::show_print_progress(self, &ctx);
+        self.show_ocr_dialog(&ctx);
+        self.show_ocr_progress(&ctx);
+        self.show_pack_manager(&ctx);
 
         let title = self.window_title();
         if title != self.title {

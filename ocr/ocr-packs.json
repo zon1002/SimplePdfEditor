@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "packs": [
+    {
+      "id": "engine",
+      "kind": "engine",
+      "name": "OCR 辨識引擎",
+      "description": "ONNX Runtime 1.31（Microsoft，MIT 授權）與文字方向判斷模型。所有 OCR 語言包都需要。",
+      "version": 1,
+      "languages": [],
+      "files": [
+        {
+          "name": "onnxruntime.dll",
+          "sha256": "0c42dc4e278f0968fdf9ebf1b1e54a74c657a9942e70803e453c91993451cf4c",
+          "size": 17253176,
+          "role": ""
+        },
+        {
+          "name": "cls.onnx",
+          "sha256": "54379ae5174d026780215fc748a7f31910dee36818e63d49e17dc598ecc82df7",
+          "size": 1018508,
+          "role": "cls"
+        },
+        {
+          "name": "LICENSE-onnxruntime.txt",
+          "sha256": "c250d6278f0b47a6439fb7592b08b58a55eb9f535aa49a1db63211c3f982b674",
+          "size": 1094,
+          "role": ""
+        },
+        {
+          "name": "ThirdPartyNotices-onnxruntime.txt",
+          "sha256": "c53a76501ef60db6f865f20599f220761201ac4057683acefdab37d861b86622",
+          "size": 344457,
+          "role": ""
+        },
+        {
+          "name": "LICENSE-PaddleOCR.txt",
+          "sha256": "69ab888fa023e558e521d45fa0e92f260d5feaf1c9fd30942707230dcf435598",
+          "size": 10414,
+          "role": ""
+        }
+      ],
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-engine-v1.zip",
+      "zip_size": 7300876,
+      "zip_sha256": "bc731486654e2e047f577f9558249e6d4d69f701b73558cc8aaf0ea979e176fa",
+      "default": true,
+      "order": 0
+    },
+    {
+      "id": "std",
+      "kind": "tier",
+      "name": "中文（繁體／簡體）、英文、日文　標準（建議）",
+      "description": "PaddleOCR PP-OCRv6 small。一般文件與清晰掃描檔正確率約 96–100%，每頁約 2–3 秒。建議大多數使用者使用。",
+      "version": 1,
+      "languages": [
+        "zh-Hant",
+        "zh-Hans",
+        "en",
+        "ja"
+      ],
+      "files": [
+        {
+          "name": "det.onnx",
+          "sha256": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f",
+          "size": 9929594,
+          "role": "det"
+        },
+        {
+          "name": "rec.onnx",
+          "sha256": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884",
+          "size": 21234383,
+          "role": "rec"
+        },
+        {
+          "name": "LICENSE-PaddleOCR.txt",
+          "sha256": "69ab888fa023e558e521d45fa0e92f260d5feaf1c9fd30942707230dcf435598",
+          "size": 10414,
+          "role": ""
+        }
+      ],
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-std-v1.zip",
+      "zip_size": 26631008,
+      "zip_sha256": "d1c25c7e6f851524047c5e268d150b4c31b1bda51ec910b408dfa12849934586",
+      "default": true,
+      "order": 1
+    },
+    {
+      "id": "medium",
+      "kind": "tier",
+      "name": "中文（繁體／簡體）、英文、日文　高精度",
+      "description": "PaddleOCR PP-OCRv6 medium。正確率與標準版相近，施工圖等極小字略佳；速度慢約 15–30 倍（每頁約 40–100 秒）。",
+      "version": 1,
+      "languages": [
+        "zh-Hant",
+        "zh-Hans",
+        "en",
+        "ja"
+      ],
+      "files": [
+        {
+          "name": "det.onnx",
+          "sha256": "92078b7355007ccfffcd4c8cd441a3afd4538904d06881b29a155e1e679907c2",
+          "size": 62119454,
+          "role": "det"
+        },
+        {
+          "name": "rec.onnx",
+          "sha256": "eef444829dbbe18d7fea59a3f6eb75647518d2b3a9568d27c92e42940204894b",
+          "size": 76629984,
+          "role": "rec"
+        },
+        {
+          "name": "LICENSE-PaddleOCR.txt",
+          "sha256": "69ab888fa023e558e521d45fa0e92f260d5feaf1c9fd30942707230dcf435598",
+          "size": 10414,
+          "role": ""
+        }
+      ],
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-medium-v1.zip",
+      "zip_size": 105757326,
+      "zip_sha256": "16cd9a6fa078067abf2741994fb25a277b6b02351dc1bb6809d81a6337f738d3",
+      "default": false,
+      "order": 2
+    },
+    {
+      "id": "server",
+      "kind": "tier",
+      "name": "中文（繁體／簡體）、英文、日文　最高精度（伺服器版）",
+      "description": "PaddleOCR PP-OCRv5 server。清晰文件正確率接近 100%，但模糊掃描的繁體中文較易誤認為簡體；每頁約 50 秒。",
+      "version": 1,
+      "languages": [
+        "zh-Hant",
+        "zh-Hans",
+        "en",
+        "ja"
+      ],
+      "files": [
+        {
+          "name": "det.onnx",
+          "sha256": "0f8846b1d4bba223a2a2f9d9b44022fbc22cc019051a602b41a7fda9667e4cad",
+          "size": 88118768,
+          "role": "det"
+        },
+        {
+          "name": "rec.onnx",
+          "sha256": "e09385400eaaaef34ceff54aeb7c4f0f1fe014c27fa8b9905d4709b65746562a",
+          "size": 84577022,
+          "role": "rec"
+        },
+        {
+          "name": "LICENSE-PaddleOCR.txt",
+          "sha256": "69ab888fa023e558e521d45fa0e92f260d5feaf1c9fd30942707230dcf435598",
+          "size": 10414,
+          "role": ""
+        }
+      ],
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-server-v1.zip",
+      "zip_size": 155792506,
+      "zip_sha256": "98e25abcd6295523fa1d368941e467131a7a0d0f34b715919f24ffd6b0157f62",
+      "default": false,
+      "order": 3
+    },
+    {
+      "id": "ko",
+      "kind": "language",
+      "name": "韓文",
+      "description": "PaddleOCR PP-OCRv5 韓文辨識模型，與已安裝的中英日語言包一起使用。測試文件正確率約 100%。",
+      "version": 1,
+      "languages": [
+        "ko",
+        "en"
+      ],
+      "files": [
+        {
+          "name": "rec.onnx",
+          "sha256": "cd6e2ea50f6943ca7271eb8c56a877a5a90720b7047fe9c41a2e541a25773c9b",
+          "size": 13488748,
+          "role": "rec"
+        },
+        {
+          "name": "LICENSE-PaddleOCR.txt",
+          "sha256": "69ab888fa023e558e521d45fa0e92f260d5feaf1c9fd30942707230dcf435598",
+          "size": 10414,
+          "role": ""
+        }
+      ],
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-ko-v1.zip",
+      "zip_size": 8334062,
+      "zip_sha256": "1c4d8520e061aedc0fb6d924cdd8ae8497a083219715de7e9bc354c6303cd266",
+      "default": false,
+      "order": 10
+    },
+    {
+      "id": "latin",
+      "kind": "language",
+      "name": "拉丁語系（法、德、西、義、葡等）",
+      "description": "PaddleOCR PP-OCRv5 拉丁語系辨識模型（含重音字母），與已安裝的中英日語言包一起使用。",
+      "version": 1,
+      "languages": [
+        "fr",
+        "de",
+        "es",
+        "it",
+        "pt",
+        "nl",
+        "en"
+      ],
+      "files": [
+        {
+          "name": "rec.onnx",
+          "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a",
+          "size": 7904513,
+          "role": "rec"
+        },
+        {
+          "name": "LICENSE-PaddleOCR.txt",
+          "sha256": "69ab888fa023e558e521d45fa0e92f260d5feaf1c9fd30942707230dcf435598",
+          "size": 10414,
+          "role": ""
+        }
+      ],
+      "url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1/ocr-latin-v1.zip",
+      "zip_size": 7271079,
+      "zip_sha256": "efcf2554363eee9a359943854b2fdda3992edd14e14f599444e14e2936973aa1",
+      "default": false,
+      "order": 11
+    }
+  ]
+}

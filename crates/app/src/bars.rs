@@ -60,6 +60,8 @@ enum Act {
     Help,
     About,
     Tool(Tool),
+    Ocr,
+    OcrPacks,
 }
 
 fn shortcut(m: Modifiers, k: Key) -> KeyboardShortcut {
@@ -167,13 +169,15 @@ impl App {
             Act::Help => self.help.open = true,
             Act::About => self.about_open = true,
             Act::Tool(t) if open => self.set_tool(t),
+            Act::Ocr if open => self.open_ocr_dialog(),
+            Act::OcrPacks => self.open_pack_manager(),
             _ => {}
         }
     }
 
     /// 快捷鍵（對話框開啟時不處理；文字輸入中不處理單鍵）
     pub fn handle_shortcuts(&mut self, ctx: &egui::Context) {
-        if self.dialog.is_some() || self.print_job.is_some() {
+        if self.dialog.is_some() || self.print_job.is_some() || self.ocr_dialog.is_some() || self.ocr_job.is_some() {
             return;
         }
         let c = Modifiers::COMMAND;
@@ -317,6 +321,9 @@ impl App {
                         todo = Some(Act::Tool(t));
                     }
                 }
+                ui.separator();
+                item(ui, "文字辨識 (OCR)…", "", editing, Act::Ocr, &mut todo);
+                item(ui, "OCR 語言管理…", "", true, Act::OcrPacks, &mut todo);
             });
             ui.menu_button("說明(H)", |ui| {
                 item(ui, "使用說明", "F1", true, Act::Help, &mut todo);

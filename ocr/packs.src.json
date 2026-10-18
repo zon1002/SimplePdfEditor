@@ -1,0 +1,132 @@
+{
+  "release_url": "https://github.com/zon1002/SimplePdfEditor/releases/download/ocr-packs-v1",
+  "upstream": {
+    "onnxruntime-win-x64-1.31.0.zip": {
+      "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.31.0/onnxruntime-win-x64-1.31.0.zip",
+      "sha256": "3958d8a44984160692c1b4ffd0de3cb48f8c39f9d34bb31e433db06e30b82195"
+    },
+    "ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/cls/ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx",
+      "sha256": "54379ae5174d026780215fc748a7f31910dee36818e63d49e17dc598ecc82df7"
+    },
+    "PP-OCRv6_det_small.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/det/PP-OCRv6_det_small.onnx",
+      "sha256": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f"
+    },
+    "PP-OCRv6_rec_small.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/rec/PP-OCRv6_rec_small.onnx",
+      "sha256": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884"
+    },
+    "PP-OCRv6_det_medium.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/det/PP-OCRv6_det_medium.onnx",
+      "sha256": "92078b7355007ccfffcd4c8cd441a3afd4538904d06881b29a155e1e679907c2"
+    },
+    "PP-OCRv6_rec_medium.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/rec/PP-OCRv6_rec_medium.onnx",
+      "sha256": "eef444829dbbe18d7fea59a3f6eb75647518d2b3a9568d27c92e42940204894b"
+    },
+    "ch_PP-OCRv5_det_server.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_server.onnx",
+      "sha256": "0f8846b1d4bba223a2a2f9d9b44022fbc22cc019051a602b41a7fda9667e4cad"
+    },
+    "ch_PP-OCRv5_rec_server.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_server.onnx",
+      "sha256": "e09385400eaaaef34ceff54aeb7c4f0f1fe014c27fa8b9905d4709b65746562a"
+    },
+    "korean_PP-OCRv5_rec_mobile.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/rec/korean_PP-OCRv5_rec_mobile.onnx",
+      "sha256": "cd6e2ea50f6943ca7271eb8c56a877a5a90720b7047fe9c41a2e541a25773c9b"
+    },
+    "latin_PP-OCRv5_rec_mobile.onnx": {
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/rec/latin_PP-OCRv5_rec_mobile.onnx",
+      "sha256": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"
+    }
+  },
+  "packs": [
+    {
+      "id": "engine",
+      "kind": "engine",
+      "name": "OCR 辨識引擎",
+      "description": "ONNX Runtime 1.31（Microsoft，MIT 授權）與文字方向判斷模型。所有 OCR 語言包都需要。",
+      "version": 1,
+      "order": 0,
+      "default": true,
+      "files": [
+        { "name": "onnxruntime.dll", "from": "onnxruntime-win-x64-1.31.0.zip:onnxruntime-win-x64-1.31.0/lib/onnxruntime.dll" },
+        { "name": "cls.onnx", "role": "cls", "from": "ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx" },
+        { "name": "LICENSE-onnxruntime.txt", "from": "onnxruntime-win-x64-1.31.0.zip:onnxruntime-win-x64-1.31.0/LICENSE" },
+        { "name": "ThirdPartyNotices-onnxruntime.txt", "from": "onnxruntime-win-x64-1.31.0.zip:onnxruntime-win-x64-1.31.0/ThirdPartyNotices.txt" },
+        { "name": "LICENSE-PaddleOCR.txt", "from": "license:apache" }
+      ]
+    },
+    {
+      "id": "std",
+      "kind": "tier",
+      "name": "中文（繁體／簡體）、英文、日文　標準（建議）",
+      "description": "PaddleOCR PP-OCRv6 small。一般文件與清晰掃描檔正確率約 96–100%，每頁約 2–3 秒。建議大多數使用者使用。",
+      "version": 1,
+      "order": 1,
+      "default": true,
+      "languages": ["zh-Hant", "zh-Hans", "en", "ja"],
+      "files": [
+        { "name": "det.onnx", "role": "det", "from": "PP-OCRv6_det_small.onnx" },
+        { "name": "rec.onnx", "role": "rec", "from": "PP-OCRv6_rec_small.onnx" },
+        { "name": "LICENSE-PaddleOCR.txt", "from": "license:apache" }
+      ]
+    },
+    {
+      "id": "medium",
+      "kind": "tier",
+      "name": "中文（繁體／簡體）、英文、日文　高精度",
+      "description": "PaddleOCR PP-OCRv6 medium。正確率與標準版相近，施工圖等極小字略佳；速度慢約 15–30 倍（每頁約 40–100 秒）。",
+      "version": 1,
+      "order": 2,
+      "languages": ["zh-Hant", "zh-Hans", "en", "ja"],
+      "files": [
+        { "name": "det.onnx", "role": "det", "from": "PP-OCRv6_det_medium.onnx" },
+        { "name": "rec.onnx", "role": "rec", "from": "PP-OCRv6_rec_medium.onnx" },
+        { "name": "LICENSE-PaddleOCR.txt", "from": "license:apache" }
+      ]
+    },
+    {
+      "id": "server",
+      "kind": "tier",
+      "name": "中文（繁體／簡體）、英文、日文　最高精度（伺服器版）",
+      "description": "PaddleOCR PP-OCRv5 server。清晰文件正確率接近 100%，但模糊掃描的繁體中文較易誤認為簡體；每頁約 50 秒。",
+      "version": 1,
+      "order": 3,
+      "languages": ["zh-Hant", "zh-Hans", "en", "ja"],
+      "files": [
+        { "name": "det.onnx", "role": "det", "from": "ch_PP-OCRv5_det_server.onnx" },
+        { "name": "rec.onnx", "role": "rec", "from": "ch_PP-OCRv5_rec_server.onnx" },
+        { "name": "LICENSE-PaddleOCR.txt", "from": "license:apache" }
+      ]
+    },
+    {
+      "id": "ko",
+      "kind": "language",
+      "name": "韓文",
+      "description": "PaddleOCR PP-OCRv5 韓文辨識模型，與已安裝的中英日語言包一起使用。測試文件正確率約 100%。",
+      "version": 1,
+      "order": 10,
+      "languages": ["ko", "en"],
+      "files": [
+        { "name": "rec.onnx", "role": "rec", "from": "korean_PP-OCRv5_rec_mobile.onnx" },
+        { "name": "LICENSE-PaddleOCR.txt", "from": "license:apache" }
+      ]
+    },
+    {
+      "id": "latin",
+      "kind": "language",
+      "name": "拉丁語系（法、德、西、義、葡等）",
+      "description": "PaddleOCR PP-OCRv5 拉丁語系辨識模型（含重音字母），與已安裝的中英日語言包一起使用。",
+      "version": 1,
+      "order": 11,
+      "languages": ["fr", "de", "es", "it", "pt", "nl", "en"],
+      "files": [
+        { "name": "rec.onnx", "role": "rec", "from": "latin_PP-OCRv5_rec_mobile.onnx" },
+        { "name": "LICENSE-PaddleOCR.txt", "from": "license:apache" }
+      ]
+    }
+  ]
+}

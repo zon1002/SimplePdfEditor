@@ -101,3 +101,44 @@ fn non_embedded_cjk_font_is_drawn_with_system_font() {
     assert!(dark > 400, "未嵌入的中文字應以系統字型畫出（深色像素 {dark}）");
     assert!(d.page_text(0).plain_text().contains("員工編號"), "文字擷取：{}", d.page_text(0).plain_text());
 }
+
+/// OCR 文字層：存檔後可擷取文字、位置正確，且頁面外觀完全不變（文字不可見）
+#[test]
+fn ocr_layer_is_invisible_searchable_text() {
+    use pdfcore::{Mark, MarkType, OcrGlyph, OcrTextLine, Pt, Rect};
+    let doc = Document::open_file(&sample(), "").unwrap();
+    // 在頁面空白處（y 500–520）放一行 OCR 結果：每個字 20×20 pt
+    let text = "掃描文字OCR測試";
+    let glyphs: Vec<OcrGlyph> = text
+        .chars()
+        .enumerate()
+        .map(|(i, c)| OcrGlyph { text: c.to_string(), quad: Rect::new(100.0 + i as f64 * 20.0, 500.0, 120.0 + i as f64 * 20.0, 520.0).corners() })
+        .collect();
+    let m = Mark { kind: MarkType::Ocr, page: 0, ocr: vec![OcrTextLine { text: text.into(), confidence: 0.99, glyphs }], ..Default::default() };
+
+    // 存檔前：OCR 結果可選取
+    let pt = pdfcore::document::ocr_page_text(&m.ocr, Pt::default());
+    let (quads, sel) = pdfcore::document::select_in(&pt, Pt::new(101.0, 510.0), Pt::new(279.0, 510.0));
+    assert_eq!(sel, text);
+    assert_eq!(quads.len(), 1);
+
+    let bytes = pdfcore::save::save_to_bytes(&doc, std::slice::from_ref(&m), &pdfcore::SaveOptions::default()).unwrap();
+    let plain = pdfcore::save::save_to_bytes(&doc, &[], &pdfcore::SaveOptions::default()).unwrap();
+    let saved = Document::open_bytes(bytes, "ocr.pdf", "").unwrap();
+    let base = Document::open_bytes(plain, "plain.pdf", "").unwrap();
+
+    // 頁面外觀與沒有 OCR 層時完全相同
+    let (a, b) = (saved.render(0, 1.0).unwrap(), base.render(0, 1.0).unwrap());
+    assert_eq!(a.rgba, b.rgba, "OCR 文字層不應改變頁面外觀");
+
+    // 可擷取文字，且選取位置與原本的字相符
+    let t = saved.page_text(0);
+    assert!(t.plain_text().contains(text), "擷取到：{}", t.plain_text());
+    let (quads, sel) = saved.select_text(0, Pt::new(101.0, 510.0), Pt::new(279.0, 510.0));
+    assert_eq!(sel.replace(' ', ""), text);
+    let r = pdfcore::geom::quad_bounds(&quads[0]);
+    // 9 個字 × 20 pt：100–280
+    assert!((r.x0 - 100.0).abs() < 0.5 && (r.x1 - 280.0).abs() < 0.5, "{r:?}");
+    assert!((r.y0 - 500.0).abs() < 0.5 && (r.y1 - 520.0).abs() < 0.5, "{r:?}");
+    std::fs::write(format!("{}/../../target/ocr-layer.pdf", env!("CARGO_MANIFEST_DIR")), saved.bytes().as_slice()).unwrap();
+}

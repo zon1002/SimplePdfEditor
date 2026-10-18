@@ -16,5 +16,5 @@ pub mod text;
 
 pub use document::{Document, Image, OpenError, OutlineItem};
 pub use geom::{Affine, Pt, Quad, Rect, Rgba};
-pub use marks::{EditModel, LineGeometry, Mark, MarkList, MarkType, line_geometry};
+pub use marks::{EditModel, LineGeometry, Mark, MarkList, MarkType, OcrGlyph, OcrTextLine, line_geometry};
 pub use save::SaveOptions;

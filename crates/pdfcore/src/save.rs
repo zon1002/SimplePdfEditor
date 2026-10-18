@@ -292,7 +292,24 @@ fn apply_marks(pdf: &mut lopdf::Document, page_ids: &[ObjectId], transforms: &[A
                     push_annot(pdf, page, id)?;
                 }
             }
-            MarkType::Text => {}
+            MarkType::Text | MarkType::Ocr => {}
+        }
+    }
+
+    // OCR：每頁一個看不見的文字層
+    let ocr_pages: BTreeMap<usize, Vec<&Mark>> = marks.iter().filter(|m| m.kind == MarkType::Ocr && m.page < page_ids.len() && !m.ocr.is_empty()).fold(
+        BTreeMap::new(),
+        |mut acc, m| {
+            acc.entry(m.page).or_insert_with(Vec::new).push(m);
+            acc
+        },
+    );
+    if !ocr_pages.is_empty() {
+        let font = glyphless_font(pdf, marks)?;
+        for (page_no, ms) in ocr_pages {
+            let Some(&page) = page_ids.get(page_no) else { continue };
+            let tf = transforms.get(page_no).copied().unwrap_or(Affine::IDENTITY);
+            stamp_ocr(pdf, page, page_no, &tf, &ms, font)?;
         }
     }
 
@@ -693,6 +710,15 @@ fn stamp_texts(
     }
     let _ = writeln!(c, "Q");
 
+    let mut res = dictionary! { "Font" => fonts_res };
+    if !gs_res.is_empty() {
+        res.set("ExtGState", gs_res);
+    }
+    attach_form(pdf, page, page_no, c, res)
+}
+
+/// 把內容畫成 Form XObject，再以 q/Q 包住原內容後附加到頁面
+fn attach_form(pdf: &mut lopdf::Document, page: ObjectId, page_no: usize, c: String, res: Dictionary) -> Result<(), String> {
     // 表單範圍：頁面可見範圍（PDF 座標）
     let crop = inherited(pdf, page, b"CropBox").or_else(|| inherited(pdf, page, b"MediaBox"));
     let bbox = crop
@@ -704,10 +730,6 @@ fn stamp_texts(
             (v.len() == 4).then(|| Rect::new(v[0].min(v[2]), v[1].min(v[3]), v[0].max(v[2]), v[1].max(v[3])))
         })
         .unwrap_or(Rect::new(0.0, 0.0, 612.0, 792.0));
-    let mut res = dictionary! { "Font" => fonts_res };
-    if !gs_res.is_empty() {
-        res.set("ExtGState", gs_res);
-    }
     let xobj = add_appearance(pdf, &bbox, Some(res), c);
 
     // 把 XObject 掛到頁面資源（資源若是繼承或共用的，先複製一份到本頁）
@@ -747,6 +769,226 @@ fn stamp_texts(
     let contents = flatten_contents(pdf, contents);
     pdf.get_dictionary_mut(page).map_err(|e| e.to_string())?.set("Contents", Object::Array(contents));
     Ok(())
+}
+
+// ---------------------------------------------------------------- OCR 文字層
+
+/// OCR 用的「無字形」字型：Type0／Identity-H，CID 即 Unicode 碼位，所有 CID 都對應到空白字形。
+/// 文字以不可見模式（3 Tr）寫入，只用於搜尋、選取與複製，因此不需要任何中日韓字型。
+fn glyphless_font(pdf: &mut lopdf::Document, marks: &[Mark]) -> Result<ObjectId, String> {
+    // 用到的最大 CID（決定 CIDToGIDMap 的長度）與用到的高位元組（ToUnicode 範圍）
+    let mut max_cid = 0u32;
+    let mut highs = BTreeSet::new();
+    for m in marks.iter().filter(|m| m.kind == MarkType::Ocr) {
+        for l in &m.ocr {
+            for g in &l.glyphs {
+                for ch in g.text.chars() {
+                    let cid = ocr_cid(ch) as u32;
+                    max_cid = max_cid.max(cid);
+                    highs.insert(cid >> 8);
+                }
+            }
+        }
+    }
+    // 字型程式：自行產生的最小 TrueType（一個空白字形，寬 1 em、上升 0.8 em、下降 0.2 em），
+    // 字的基線放在框底上方 0.2 處，選取範圍就剛好等於每個字的四邊形；不依賴任何系統字型
+    let ttf = glyphless_ttf();
+    let mut st = Stream::new(dictionary! { "Length1" => ttf.len() as i64 }, ttf);
+    st.compress().ok();
+    let font_file = Some(pdf.add_object(st));
+    let mut descriptor = dictionary! {
+        "Type" => "FontDescriptor",
+        "FontName" => "GlyphLessFont",
+        "Flags" => 5,
+        "FontBBox" => Object::Array(vec![0.into(), (-200).into(), 1000.into(), 800.into()]),
+        "ItalicAngle" => 0,
+        "Ascent" => 800,
+        "Descent" => -200,
+        "CapHeight" => 800,
+        "StemV" => 80,
+    };
+    if let Some(id) = font_file {
+        descriptor.set("FontFile2", Object::Reference(id));
+    }
+    let descriptor_id = pdf.add_object(descriptor);
+    // CIDToGIDMap：所有 CID 都對應到字形 0
+    let mut map = Stream::new(dictionary! {}, vec![0u8; (max_cid as usize + 1) * 2]);
+    map.compress().ok();
+    let map_id = pdf.add_object(map);
+    let cid_font = pdf.add_object(dictionary! {
+        "Type" => "Font",
+        "Subtype" => "CIDFontType2",
+        "BaseFont" => "GlyphLessFont",
+        "CIDSystemInfo" => dictionary! {
+            "Registry" => Object::string_literal("Adobe"),
+            "Ordering" => Object::string_literal("Identity"),
+            "Supplement" => 0,
+        },
+        "FontDescriptor" => Object::Reference(descriptor_id),
+        "DW" => 1000,
+        "CIDToGIDMap" => Object::Reference(map_id),
+    });
+    // ToUnicode：CID 就是 Unicode 碼位，以每 256 個一段的範圍對應
+    let mut cmap = String::from(
+        "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n",
+    );
+    let highs: Vec<u32> = highs.into_iter().collect();
+    for chunk in highs.chunks(100) {
+        let _ = writeln!(cmap, "{} beginbfrange", chunk.len());
+        for h in chunk {
+            let _ = writeln!(cmap, "<{h:02X}00> <{h:02X}FF> <{h:02X}00>");
+        }
+        let _ = writeln!(cmap, "endbfrange");
+    }
+    cmap.push_str("endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n");
+    let cmap_id = add_stream(pdf, dictionary! {}, cmap.into_bytes());
+    Ok(pdf.add_object(dictionary! {
+        "Type" => "Font",
+        "Subtype" => "Type0",
+        "BaseFont" => "GlyphLessFont",
+        "Encoding" => "Identity-H",
+        "DescendantFonts" => Object::Array(vec![Object::Reference(cid_font)]),
+        "ToUnicode" => Object::Reference(cmap_id),
+    }))
+}
+
+/// 最小的 TrueType 字型：只有一個空白字形，unitsPerEm 1000、字寬 1000、上升 800、下降 200
+fn glyphless_ttf() -> Vec<u8> {
+    fn be16(v: &mut Vec<u8>, x: u16) {
+        v.extend_from_slice(&x.to_be_bytes());
+    }
+    fn be32(v: &mut Vec<u8>, x: u32) {
+        v.extend_from_slice(&x.to_be_bytes());
+    }
+    let mut head = Vec::new();
+    be32(&mut head, 0x0001_0000); // version
+    be32(&mut head, 0x0001_0000); // fontRevision
+    be32(&mut head, 0); // checkSumAdjustment（最後填入）
+    be32(&mut head, 0x5F0F_3CF5); // magicNumber
+    be16(&mut head, 0x000B); // flags
+    be16(&mut head, 1000); // unitsPerEm
+    head.extend_from_slice(&[0; 16]); // created, modified
+    for v in [0i16, -200, 1000, 800] {
+        be16(&mut head, v as u16); // xMin, yMin, xMax, yMax
+    }
+    be16(&mut head, 0); // macStyle
+    be16(&mut head, 8); // lowestRecPPEM
+    be16(&mut head, 2); // fontDirectionHint
+    be16(&mut head, 0); // indexToLocFormat（short）
+    be16(&mut head, 0); // glyphDataFormat
+
+    let mut hhea = Vec::new();
+    be32(&mut hhea, 0x0001_0000);
+    for v in [800i16, -200, 0, 1000, 0, 0, 1000, 1, 0, 0, 0, 0, 0, 0, 0, 1].map(|v| v as u16) {
+        // ascender, descender, lineGap, advanceWidthMax, minLSB, minRSB, xMaxExtent,
+        // caretSlopeRise, caretSlopeRun, caretOffset, reserved×4, metricDataFormat, numberOfHMetrics
+        be16(&mut hhea, v);
+    }
+
+    let mut maxp = Vec::new();
+    be32(&mut maxp, 0x0001_0000);
+    for v in [1u16, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0] {
+        // numGlyphs, maxPoints, maxContours, maxCompositePoints, maxCompositeContours, maxZones, …
+        be16(&mut maxp, v);
+    }
+
+    let mut hmtx = Vec::new();
+    be16(&mut hmtx, 1000); // advanceWidth
+    be16(&mut hmtx, 0); // lsb
+    let loca = vec![0u8; 4]; // 兩個 0：字形 0 沒有外框
+    let glyf = vec![0u8; 4];
+    let mut cmap = Vec::new();
+    for v in [0u16, 1, 3, 1] {
+        be16(&mut cmap, v); // version, numTables, platformID, encodingID
+    }
+    be32(&mut cmap, 12); // offset
+    for v in [4u16, 24, 0, 2, 2, 0, 0, 0xFFFF, 0, 0xFFFF, 1, 0] {
+        // format 4：只有結尾的 0xFFFF 區段
+        be16(&mut cmap, v);
+    }
+
+    let mut tables: Vec<(&[u8; 4], Vec<u8>)> =
+        vec![(b"cmap", cmap), (b"glyf", glyf), (b"head", head), (b"hhea", hhea), (b"hmtx", hmtx), (b"loca", loca), (b"maxp", maxp)];
+    let checksum = |d: &[u8]| -> u32 {
+        d.chunks(4).fold(0u32, |acc, c| {
+            let mut w = [0u8; 4];
+            w[..c.len()].copy_from_slice(c);
+            acc.wrapping_add(u32::from_be_bytes(w))
+        })
+    };
+    let n = tables.len() as u16;
+    let mut out = Vec::new();
+    be32(&mut out, 0x0001_0000);
+    be16(&mut out, n);
+    be16(&mut out, 64); // searchRange（4 個 × 16）
+    be16(&mut out, 2); // entrySelector
+    be16(&mut out, n * 16 - 64); // rangeShift
+    let mut offset = 12 + 16 * n as u32;
+    let mut head_offset = 0;
+    for (tag, data) in &tables {
+        if *tag == b"head" {
+            head_offset = offset;
+        }
+        out.extend_from_slice(*tag);
+        be32(&mut out, checksum(data));
+        be32(&mut out, offset);
+        be32(&mut out, data.len() as u32);
+        offset += (data.len() as u32 + 3) & !3;
+    }
+    for (_, data) in tables.iter_mut() {
+        let pad = (4 - data.len() % 4) % 4;
+        data.extend(std::iter::repeat_n(0, pad));
+        out.extend_from_slice(data);
+    }
+    let adj = 0xB1B0_AFBAu32.wrapping_sub(checksum(&out));
+    let at = head_offset as usize + 8;
+    out[at..at + 4].copy_from_slice(&adj.to_be_bytes());
+    out
+}
+
+/// 字元 → CID（Unicode 碼位；超出 BMP 或控制字元以 U+FFFD 代替）
+fn ocr_cid(c: char) -> u16 {
+    let v = c as u32;
+    if v <= 0xFFFF && !(0xD800..=0xDFFF).contains(&v) && v >= 0x20 { v as u16 } else { 0xFFFD }
+}
+
+/// 一頁的 OCR 文字層：每個字以不可見文字放在它的四邊形上（字寬、字高與方向都與原圖相符）
+fn stamp_ocr(pdf: &mut lopdf::Document, page: ObjectId, page_no: usize, tf: &Affine, marks: &[&Mark], font: ObjectId) -> Result<(), String> {
+    let mut c = String::from("BT 3 Tr /OCR 1 Tf\n");
+    let mut count = 0usize;
+    for m in marks {
+        for l in &m.ocr {
+            for g in &l.glyphs {
+                let chars: Vec<char> = g.text.chars().collect();
+                if chars.is_empty() {
+                    continue;
+                }
+                // X 軸沿底邊（閱讀方向）、Y 軸沿左邊（往上），每個字平分寬度；
+                // 字型的下降為 0.2 em，基線放在框底上方 0.2 個字高
+                let bl = tf.apply(g.quad[3] + m.offset);
+                let x = tf.apply(g.quad[2] + m.offset) - bl;
+                let y = tf.apply(g.quad[0] + m.offset) - bl;
+                let o = bl + y * 0.2;
+                let n = chars.len() as f64;
+                let (xx, xy) = (x.x / n, x.y / n);
+                for (k, ch) in chars.iter().enumerate() {
+                    let (ox, oy) = (o.x + xx * k as f64, o.y + xy * k as f64);
+                    let _ = writeln!(c, "{} {} {} {} {} {} Tm <{:04X}> Tj", n_(xx), n_(xy), n_(y.x), n_(y.y), n_(ox), n_(oy), ocr_cid(*ch));
+                    count += 1;
+                }
+            }
+        }
+    }
+    if count == 0 {
+        return Ok(());
+    }
+    c.push_str("ET\n");
+    let res = dictionary! { "Font" => dictionary! { "OCR" => Object::Reference(font) } };
+    attach_form(pdf, page, page_no, c, res)
+}
+
+fn n_(v: f64) -> String {
+    n(v)
 }
 
 /// /Contents 若指向一個陣列物件（而非串流），展開成串流的參照

@@ -2,13 +2,21 @@
 ; Copyright (C) 2026 Fufeng Project
 ; ---------------------------------------------------------------
 ; 簡易 PDF 編輯器 - Inno Setup 安裝程式腳本
-;   先執行 publish.ps1 產生 publish\，再以 ISCC 編譯本檔：
-;   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss
+;   publish.ps1 會產生 publish\、target\ocr-packs\ 與 target\ocr-installer\packs.iss，
+;   並編譯兩種安裝程式：
+;     離線版："ISCC.exe" SimplePdfEditor_Setup.iss
+;             內含 OCR 辨識引擎與中英日標準語言包，不需網路
+;     線上版："ISCC.exe" /DOnline SimplePdfEditor_Setup.iss
+;             檔案較小，勾選的 OCR 語言包在安裝時從 GitHub Releases 下載
+;   兩種版本的其他 OCR 語言包（高精度、伺服器版、韓文、拉丁語系）都在安裝時下載；
+;   下載失敗不影響主程式安裝，之後可在「工具 > OCR 語言管理」下載或從檔案加入。
 ; ---------------------------------------------------------------
+
+#include "target\ocr-installer\packs.iss"
 
 #define AppName "SimplePdfEditor"
 #define AppDisplay "簡易 PDF 編輯器"
-#define AppVersion "2.3.1"
+#define AppVersion "2.4.0"
 #define AppPublisher "Fufeng Project"
 #define AppExe "SimplePdfEditor.exe"
 #define ShellDll "SimplePdfPreview.dll"
@@ -26,7 +34,13 @@ ArchitecturesInstallIn64BitMode=x64compatible
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppDisplay}
 DisableProgramGroupPage=yes
+#ifdef Online
+OutputBaseFilename=SimplePdfEditor_Setup_v{#AppVersion}_Online
+#else
 OutputBaseFilename=SimplePdfEditor_Setup_v{#AppVersion}
+#endif
+; 解壓下載的 OCR 語言包（zip）
+ArchiveExtraction=full
 OutputDir=dist
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -43,6 +57,27 @@ ChangesAssociations=yes
 [Languages]
 Name: "ChineseTraditional"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
 
+[Types]
+Name: "standard"; Description: "標準安裝（含中英日文字辨識 OCR）"
+Name: "compact"; Description: "精簡安裝（不含 OCR）"
+Name: "custom"; Description: "自訂安裝"; Flags: iscustom
+
+[Components]
+Name: "main"; Description: "{#AppDisplay}"; Types: standard compact custom; Flags: fixed
+Name: "ocr"; Description: "文字辨識 OCR（掃描檔轉成可搜尋、可選取的 PDF）"; Types: standard custom
+#ifdef Online
+Name: "ocr\std"; Description: "中文（繁／簡）、英文、日文　標準（建議）：正確率約 96–100%，每頁 2–3 秒（下載 {#Pack_engine_ZipMB}+{#Pack_std_ZipMB} MB）"; \
+  ExtraDiskSpaceRequired: {#Int(Pack_std_Size) + Int(Pack_engine_Size)}; Types: standard custom
+#else
+Name: "ocr\std"; Description: "中文（繁／簡）、英文、日文　標準（建議）：正確率約 96–100%，每頁 2–3 秒"; Types: standard custom
+#endif
+Name: "ocr\medium"; Description: "中英日　高精度：小字稍好，速度慢 15–30 倍，每頁 40–100 秒（下載 {#Pack_medium_ZipMB} MB）"; \
+  ExtraDiskSpaceRequired: {#Pack_medium_Size}
+Name: "ocr\server"; Description: "中英日　最高精度（伺服器版）：清晰文件約 100%，模糊的繁體字易誤認為簡體，每頁約 50 秒（下載 {#Pack_server_ZipMB} MB）"; \
+  ExtraDiskSpaceRequired: {#Pack_server_Size}
+Name: "ocr\ko"; Description: "韓文（下載 {#Pack_ko_ZipMB} MB）"; ExtraDiskSpaceRequired: {#Pack_ko_Size}
+Name: "ocr\latin"; Description: "拉丁語系：法、德、西、義、葡等（下載 {#Pack_latin_ZipMB} MB）"; ExtraDiskSpaceRequired: {#Pack_latin_Size}
+
 [Tasks]
 Name: "desktopicon"; Description: "建立桌面捷徑"; GroupDescription: "其他選項："
 Name: "openwith"; Description: "加入 PDF 檔的「開啟檔案」選單（不會變更預設的 PDF 開啟程式）"; GroupDescription: "其他選項："
@@ -56,6 +91,25 @@ Name: "thumbnails"; Description: "以 PDF 第 1 頁作為檔案總管縮圖（�
 Source: "publish\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; Excludes: "{#ShellDll}"
 ; 檔案總管外掛可能正被 explorer.exe / prevhost.exe 載入，無法覆蓋時改為重新開機後替換
 Source: "publish\{#ShellDll}"; DestDir: "{app}"; Flags: ignoreversion restartreplace uninsrestartdelete
+
+; OCR 語言包：安裝到 {app}\ocr\packs\<id>\（程式另外也會讀取使用者資料夾 %LOCALAPPDATA%\SimplePdfEditor\ocr\packs）
+#ifndef Online
+; 離線版：內含辨識引擎與中英日標準語言包
+Source: "target\ocr-packs\engine\*"; DestDir: "{app}\ocr\packs\engine"; Components: ocr; Flags: ignoreversion
+Source: "target\ocr-packs\std\*"; DestDir: "{app}\ocr\packs\std"; Components: ocr\std; Flags: ignoreversion
+#endif
+; 安裝前已下載並驗證 SHA-256 的 zip（見 [Code]）；下載失敗或略過時不存在，直接跳過
+#define DownloadedPack(str id, str zip, str comp) \
+  'Source: "{tmp}\' + zip + '"; DestDir: "{app}\ocr\packs\' + id + '"; Components: ' + comp + \
+  '; Flags: external extractarchive ignoreversion skipifsourcedoesntexist'
+#ifdef Online
+#emit DownloadedPack("engine", Pack_engine_Zip, "ocr")
+#emit DownloadedPack("std", Pack_std_Zip, "ocr\std")
+#endif
+#emit DownloadedPack("medium", Pack_medium_Zip, "ocr\medium")
+#emit DownloadedPack("server", Pack_server_Zip, "ocr\server")
+#emit DownloadedPack("ko", Pack_ko_Zip, "ocr\ko")
+#emit DownloadedPack("latin", Pack_latin_Zip, "ocr\latin")
 
 [InstallDelete]
 ; 從 1.x（C++／Qt 版）升級：移除不再需要的 Qt、MuPDF 相依 DLL 與 Qt 外掛資料夾
@@ -125,7 +179,71 @@ Root: HKLM64; Subkey: "Software\Classes\CLSID\{{{#ThumbGuid}}\InprocServer32"; V
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "立即啟動 {#AppDisplay}"; Flags: nowait postinstall skipifsilent
 
+[UninstallDelete]
+; 安裝程式放的 OCR 語言包（使用者自行下載的在 %LOCALAPPDATA%，不在此刪除）
+Type: filesandordirs; Name: "{app}\ocr"
+
 [Code]
+// ---- OCR 語言包下載 ----
+// 在「準備安裝」前下載勾選的語言包並驗證 SHA-256；失敗時詢問是否繼續安裝主程式，
+// 不會因為網路問題而無法安裝。下載好的 zip 由 [Files] 解壓到 {app}\ocr\packs。
+
+var
+  DownloadPage: TDownloadWizardPage;
+  PackCount: Integer;
+
+procedure InitializeWizard;
+begin
+  DownloadPage := CreateDownloadPage('下載 OCR 語言包', '正在下載勾選的文字辨識語言包，請稍候…', nil);
+  DownloadPage.ShowBaseNameInsteadOfUrl := True;
+end;
+
+procedure AddPack(const Comp, Url, Zip, Sha: String);
+begin
+  if WizardIsComponentSelected(Comp) then
+  begin
+    DownloadPage.Add(Url, Zip, Sha);
+    PackCount := PackCount + 1;
+  end;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  Msg: String;
+begin
+  Result := True;
+  if CurPageID <> wpReady then
+    Exit;
+  DownloadPage.Clear;
+  PackCount := 0;
+#ifdef Online
+  AddPack('ocr', '{#Pack_engine_Url}', '{#Pack_engine_Zip}', '{#Pack_engine_Sha}');
+  AddPack('ocr\std', '{#Pack_std_Url}', '{#Pack_std_Zip}', '{#Pack_std_Sha}');
+#endif
+  AddPack('ocr\medium', '{#Pack_medium_Url}', '{#Pack_medium_Zip}', '{#Pack_medium_Sha}');
+  AddPack('ocr\server', '{#Pack_server_Url}', '{#Pack_server_Zip}', '{#Pack_server_Sha}');
+  AddPack('ocr\ko', '{#Pack_ko_Url}', '{#Pack_ko_Zip}', '{#Pack_ko_Sha}');
+  AddPack('ocr\latin', '{#Pack_latin_Url}', '{#Pack_latin_Zip}', '{#Pack_latin_Sha}');
+  if PackCount = 0 then
+    Exit;
+  DownloadPage.Show;
+  try
+    try
+      DownloadPage.Download;
+    except
+      if DownloadPage.AbortedByUser then
+        Msg := '已取消下載 OCR 語言包。'
+      else
+        Msg := 'OCR 語言包下載失敗：' + DownloadPage.LastBaseNameOrUrl + #13#10 + GetExceptionMessage;
+      Result := SuppressibleMsgBox(Msg + #13#10#13#10 +
+        '要繼續安裝嗎？已下載完成的語言包仍會安裝；其他的之後可在程式的「工具 > OCR 語言管理」下載、' +
+        '從檔案加入，或重新執行安裝程式。', mbConfirmation, MB_YESNO, IDYES) = IDYES;
+    end;
+  finally
+    DownloadPage.Hide;
+  end;
+end;
+
 // ---- 檔案總管整合：.pdf 的預覽／縮圖處理常式 ----
 // 安裝時把原本的處理常式（例如 PDF-XChange、Adobe）記在 BackupKey，再換成本程式的；
 // 解除安裝或取消勾選時，若目前仍是本程式的，就還原成原本的。

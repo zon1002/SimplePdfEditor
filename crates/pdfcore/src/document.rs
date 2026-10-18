@@ -206,7 +206,38 @@ impl Document {
 
     /// 依拖曳起訖點選取文字（閱讀順序）；回傳每行一個 quad（ul, ur, lr, ll）與選到的文字
     pub fn select_text(&self, page: usize, a: Pt, b: Pt) -> (Vec<Quad>, String) {
-        let t = self.page_text(page);
+        select_in(&self.page_text(page), a, b)
+    }
+}
+
+/// OCR 結果（尚未存檔）轉成可選取的頁面文字
+pub fn ocr_page_text(lines: &[crate::marks::OcrTextLine], offset: Pt) -> PageText {
+    let mut glyphs = Vec::new();
+    for l in lines {
+        for g in &l.glyphs {
+            let q = g.quad.map(|p| p + offset);
+            // PageText 的四邊形：先是朝向下一行的邊（底邊，依閱讀方向），再是對邊
+            let quad = [[q[3].x as f32, q[3].y as f32], [q[2].x as f32, q[2].y as f32], [q[1].x as f32, q[1].y as f32], [q[0].x as f32, q[0].y as f32]];
+            let mut r = crate::geom::Rect::EMPTY;
+            for p in &q {
+                r.include(*p);
+            }
+            let d = q[2] - q[3];
+            let len = d.length().max(1e-6);
+            glyphs.push(crate::text::TextGlyph {
+                text: g.text.clone(),
+                rect: [r.x0 as f32, r.y0 as f32, r.x1 as f32, r.y1 as f32],
+                quad,
+                direction: [(d.x / len) as f32, (d.y / len) as f32],
+            });
+        }
+    }
+    crate::text::layout(glyphs)
+}
+
+/// 在頁面文字中依拖曳起訖點選取
+pub fn select_in(t: &PageText, a: Pt, b: Pt) -> (Vec<Quad>, String) {
+    {
         if t.is_empty() {
             return (Vec::new(), String::new());
         }

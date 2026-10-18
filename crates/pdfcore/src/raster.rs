@@ -105,6 +105,8 @@ pub fn draw_mark(pix: &mut Pixmap, m: &Mark, origin: Pt, scale: f64) {
                 pix.stroke_path(&path, &paint(m.color.with_alpha(255)), &s, id, None);
             }
         }
+        // OCR 文字層是看不見的
+        MarkType::Ocr => {}
         MarkType::Line | MarkType::Arrow => {
             let g = line_geometry(m);
             let mut pb = PathBuilder::new();

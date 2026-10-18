@@ -13,6 +13,8 @@ path = "src/main.rs"
 
 [dependencies]
 pdfcore = { workspace = true }
+# 文字辨識（PaddleOCR 模型，ONNX Runtime 執行）
+ocr = { workspace = true }
 tiny-skia = { workspace = true }
 # 介面：與 pdfcraft 相同使用 egui / eframe；以 wgpu（DX12）繪製，無法使用時改用 OpenGL
 eframe = { version = "0.36", default-features = false, features = ["default_fonts", "wgpu", "glow"] }

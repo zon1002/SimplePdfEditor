@@ -244,6 +244,10 @@ pub struct App {
     pub about_open: bool,
     pub preview: Option<PrintPreview>,
     pub print_job: Option<PrintJob>,
+    /// 文字辨識：對話框、背景工作、語言管理
+    pub ocr_dialog: Option<crate::ocr_ui::OcrDialog>,
+    pub ocr_job: Option<crate::ocr_ui::OcrJob>,
+    pub packs_ui: crate::ocr_ui::PackManager,
     pub hwnd: isize,
     /// 連續調整同一屬性時合併成一次復原
     pub coalesce: Option<(&'static str, f64)>,
@@ -289,6 +293,9 @@ impl App {
             about_open: false,
             preview: None,
             print_job: None,
+            ocr_dialog: None,
+            ocr_job: None,
+            packs_ui: Default::default(),
             hwnd,
             coalesce: None,
             allow_close: false,
