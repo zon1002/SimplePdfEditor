@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 使用說明與關於視窗。
@@ -378,8 +378,8 @@ pub fn find_doc_file(names: &[&str]) -> Option<std::path::PathBuf> {
 
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// 依 AGPL 第 0 條「適當的法律聲明」：顯示著作權、無擔保聲明、授權條款與檢視方式。
-/// 回傳使用者按下的按鈕：Some(0) 授權條款、Some(1) 第三方授權
+/// 顯示著作權、授權（MIT OR Apache-2.0）與無擔保聲明，並可開啟授權條款原文。
+/// 回傳使用者按下的按鈕：Some(0) MIT 授權、Some(1) Apache 授權、Some(2) 第三方授權
 pub fn show_about(ctx: &egui::Context, open: &mut bool) -> Option<usize> {
     let mut clicked = None;
     let mut keep = *open;
@@ -395,20 +395,23 @@ pub fn show_about(ctx: &egui::Context, open: &mut bool) -> Option<usize> {
             ui.add_space(6.0);
             paragraph(ui, "PDF 高亮、底線、文字、線條／箭頭註記，頁面匯出與 AES-256 加密、列印，以及檔案總管預覽整合。");
             paragraph(ui, "Copyright © 2026 Fufeng Project");
-            paragraph(ui, "本程式為自由軟體，依 **GNU Affero 通用公眾授權條款第 3 版或（依您的選擇）任何更新版本**（AGPL-3.0-or-later）授權，您可以重新散布及修改。");
+            paragraph(ui, "本程式以 **MIT 授權或 Apache License 2.0**（雙授權，可任選其一）釋出，可自由使用、修改、散布，包含商業用途，只需保留著作權與授權聲明。");
             paragraph(ui, "**本程式不提供任何擔保**，在法律允許的範圍內，亦不包含可售性或特定用途適用性的默示擔保。");
-            paragraph(ui, "原始碼：請見隨附的 README.md");
+            paragraph(ui, "原始碼：https://github.com/zon1002/SimplePdfEditor");
             ui.label(
                 RichText::new("使用元件：egui / eframe、hayro、lopdf（以上取自 PdfCraft 的修補版本）、tiny-skia、subsetter 等（MIT／Apache-2.0 等寬鬆授權），各第三方元件授權見「第三方授權」。")
                     .color(ui.visuals().weak_text_color()),
             );
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("授權條款").clicked() {
+                if ui.button("MIT 授權").clicked() {
                     clicked = Some(0);
                 }
-                if ui.button("第三方授權").clicked() {
+                if ui.button("Apache 授權").clicked() {
                     clicked = Some(1);
+                }
+                if ui.button("第三方授權").clicked() {
+                    clicked = Some(2);
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("關閉").clicked() {

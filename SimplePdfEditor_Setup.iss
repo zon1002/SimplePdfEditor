@@ -1,4 +1,4 @@
-﻿; SPDX-License-Identifier: AGPL-3.0-or-later
+﻿; SPDX-License-Identifier: MIT OR Apache-2.0
 ; Copyright (C) 2026 Fufeng Project
 ; ---------------------------------------------------------------
 ; 簡易 PDF 編輯器 - Inno Setup 安裝程式腳本
@@ -8,7 +8,7 @@
 
 #define AppName "SimplePdfEditor"
 #define AppDisplay "簡易 PDF 編輯器"
-#define AppVersion "2.2.0"
+#define AppVersion "2.2.1"
 #define AppPublisher "Fufeng Project"
 #define AppExe "SimplePdfEditor.exe"
 #define ShellDll "SimplePdfPreview.dll"
@@ -35,7 +35,7 @@ SetupIconFile=icons\app.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppDisplay}
 WizardStyle=modern
-; 授權頁：本程式為 AGPL-3.0-or-later 自由軟體（NOTICE.txt 為中英文說明，完整條款安裝於 {app}\LICENSE.txt）
+; 授權頁：本程式以 MIT OR Apache-2.0 雙授權釋出（NOTICE.txt 為中英文說明，完整條款安裝於 {app}\LICENSE-MIT.txt、LICENSE-APACHE.txt）
 LicenseFile=NOTICE.txt
 ; 檔案關聯變更後通知檔案總管更新
 ChangesAssociations=yes
@@ -81,7 +81,7 @@ Type: filesandordirs; Name: "{app}\styles"
 [Icons]
 Name: "{group}\{#AppDisplay}"; Filename: "{app}\{#AppExe}"
 Name: "{group}\使用說明 (README)"; Filename: "{app}\README.md"
-Name: "{group}\授權條款 (LICENSE)"; Filename: "{app}\LICENSE.txt"; Comment: "GNU AGPL-3.0"
+Name: "{group}\授權說明 (NOTICE)"; Filename: "{app}\NOTICE.txt"; Comment: "MIT OR Apache-2.0"
 Name: "{group}\解除安裝 {#AppDisplay}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppDisplay}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 不開視窗驅動整個主視窗的自動測試（egui_kittest）：以按鈕名稱點擊，與使用者操作相同。

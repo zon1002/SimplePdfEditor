@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 自動測試（不開視窗）：對範例 PDF 加上各種註記，輸出完整檔與加密的部分頁面，

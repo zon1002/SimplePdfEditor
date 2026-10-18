@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: AGPL-3.0-or-later
+﻿# SPDX-License-Identifier: MIT OR Apache-2.0
 # Copyright (C) 2026 Fufeng Project
 # ---------------------------------------------------------------
 # 建置 Release 並整理可散布的 publish\ 資料夾（供 Inno Setup 打包）
@@ -24,12 +24,13 @@ New-Item $out -ItemType Directory | Out-Null
 
 Copy-Item (Join-Path $bin 'SimplePdfEditor.exe') $out
 Copy-Item (Join-Path $bin 'SimplePdfPreview.dll') $out
-# 授權文件：AGPL 本文、聲明、第三方元件清單與授權原文
+# 授權文件：MIT 與 Apache-2.0 條款、聲明、第三方元件清單與授權原文
 foreach ($f in 'README.md', 'CHANGELOG.md', 'NOTICE.txt', 'THIRD_PARTY_NOTICES.md') {
     Copy-Item (Join-Path $root $f) $out
 }
 # 加上 .txt 副檔名，使用者雙擊即可用記事本開啟
-Copy-Item (Join-Path $root 'LICENSE') (Join-Path $out 'LICENSE.txt')
+Copy-Item (Join-Path $root 'LICENSE-MIT') (Join-Path $out 'LICENSE-MIT.txt')
+Copy-Item (Join-Path $root 'LICENSE-APACHE') (Join-Path $out 'LICENSE-APACHE.txt')
 Copy-Item (Join-Path $root 'third_party_licenses') $out -Recurse
 
 # 確認沒有依賴 VC++ 執行環境（vcruntime140.dll／api-ms-win-crt-*）

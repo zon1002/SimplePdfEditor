@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 簡易 PDF 編輯器（Rust 版）
@@ -112,10 +112,14 @@ impl App {
         help::show_help(&ctx, &mut self.help);
         if self.about_open {
             if let Some(k) = help::show_about(&ctx, &mut self.about_open) {
-                let names: &[&str] = if k == 0 { &["LICENSE.txt", "LICENSE"] } else { &["THIRD_PARTY_NOTICES.md"] };
+                let (names, url): (&[&str], &str) = match k {
+                    0 => (&["LICENSE-MIT.txt", "LICENSE-MIT"], "https://opensource.org/licenses/MIT"),
+                    1 => (&["LICENSE-APACHE.txt", "LICENSE-APACHE"], "https://www.apache.org/licenses/LICENSE-2.0"),
+                    _ => (&["THIRD_PARTY_NOTICES.md"], "https://github.com/zon1002/SimplePdfEditor/blob/main/THIRD_PARTY_NOTICES.md"),
+                };
                 match help::find_doc_file(names) {
                     Some(p) => open_with_shell(&p.to_string_lossy()),
-                    None => self.error_box(format!("找不到 {}。\n完整授權條款請見 https://www.gnu.org/licenses/agpl-3.0.html", names[0])),
+                    None => self.error_box(format!("找不到 {}。\n授權條款請見 {url}", names[0])),
                 }
             }
         }

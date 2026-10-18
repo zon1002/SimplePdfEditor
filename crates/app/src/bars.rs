@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 選單、主工具列、屬性工具列、狀態列與快捷鍵。

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 // 外掛測試：不寫入登錄，直接 LoadLibrary 取得 COM 物件，
 // 將縮圖與預覽畫面（含捲動後）存成 BMP。

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 基本幾何型別。座標一律為「頁面檢視座標」：單位 pt，原點在頁面左上角、y 向下，已套用頁面旋轉。

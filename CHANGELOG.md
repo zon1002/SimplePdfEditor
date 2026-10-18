@@ -5,6 +5,21 @@ v1.x（C++ / Qt / MuPDF 版）的紀錄見原專案的 `CHANGELOG.md`。
 
 ---
 
+## [v2.2.1] — 2026-10-19
+
+### 變更
+
+- **授權改為 MIT OR Apache-2.0 雙授權**（原為 AGPL-3.0-or-later）：Rust 版已不使用 MuPDF，所有相依元件皆為寬鬆授權。
+  - 新增 `LICENSE-MIT`、`LICENSE-APACHE`，移除 AGPL 的 `LICENSE`；所有原始碼的 SPDX 標頭、`Cargo.toml`、exe 版本資訊一併更新
+  - 「關於」視窗改為 MIT 授權／Apache 授權／第三方授權三個按鈕；安裝程式的授權頁與開始選單捷徑改為 NOTICE.txt
+  - README 與 NOTICE.txt 改寫授權說明，加入貢獻條款與原始碼網址
+
+### 修正
+
+- 第三方授權原文補上 hayro 內嵌的 Foxit 替代字型（PDFium，BSD-3-Clause）與 CMYK 色彩描述檔（CC0-1.0）。
+
+---
+
 ## [v2.2.0] — 2026-10-17
 
 ### 新增功能

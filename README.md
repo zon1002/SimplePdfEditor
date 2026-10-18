@@ -1,6 +1,6 @@
 # 簡易 PDF 編輯器（SimplePdfEditor）— Rust 版
 
-Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.0）。
+Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.1）。
 由 C++17 / Qt6 / MuPDF 的 [v1.6.0](../SimplePdfEditor) 改寫，功能維持不變，架構參考 [PdfCraft](https://github.com/storytold/pdfcraft)
 （同為純 Rust 的 PDF 工具：使用相同的 hayro 渲染、lopdf 存檔與 egui 介面，並沿用其修補版本與文字擷取模組）。
 
@@ -9,12 +9,12 @@ Rust / egui / hayro / lopdf 的輕量 PDF 註記工具（v2.2.0）。
 
 ## 下載
 
-`dist/` 內為 v2.2.0 發行版：
+`dist/` 內為 v2.2.1 發行版：
 
 | 檔案 | 說明 |
 |------|------|
-| `SimplePdfEditor_Setup_v2.2.0.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
-| `SimplePdfEditor_v2.2.0_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
+| `SimplePdfEditor_Setup_v2.2.1.exe` | 安裝程式（可選檔案總管預覽／縮圖整合、「開啟檔案」選單、桌面捷徑） |
+| `SimplePdfEditor_v2.2.1_portable.zip` | 免安裝版：解壓縮後直接執行 `SimplePdfEditor.exe`（不含檔案總管整合） |
 
 ## 功能
 
@@ -86,7 +86,7 @@ target\release\shellext_test.exe target\release\SimplePdfPreview.dll test\sample
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置並整理 publish\（含煙霧測試、檢查不依賴 VC++ 執行環境）
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.2.0.exe
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SimplePdfEditor_Setup.iss   # 產生 dist\SimplePdfEditor_Setup_v2.2.1.exe
 ```
 
 安裝程式沿用 v1.x 的 AppId，可直接覆蓋升級，並移除舊版的 Qt／MuPDF DLL。
@@ -123,13 +123,23 @@ powershell -ExecutionPolicy Bypass -File publish.ps1                    # 建置
 
 Copyright (C) 2026 Fufeng Project
 
-本專案以 **GNU Affero General Public License v3.0 或更新版本**（`AGPL-3.0-or-later`）授權，完整條款見 [LICENSE](LICENSE)，
-中英文說明見 [NOTICE.txt](NOTICE.txt)。第三方元件（全部為 MIT／Apache-2.0 等寬鬆授權）清單見
+本專案以 **MIT 授權**或 **Apache License 2.0** 雙授權釋出（`MIT OR Apache-2.0`），可任選其一：
+
+- [LICENSE-MIT](LICENSE-MIT)
+- [LICENSE-APACHE](LICENSE-APACHE)
+
+中英文說明見 [NOTICE.txt](NOTICE.txt)。可自由使用、修改、散布，包含商業與閉源用途，只需保留著作權與授權聲明；
+本程式不提供任何擔保。第三方元件（全部為 MIT／Apache-2.0／BSD 等寬鬆授權，沒有 GPL／AGPL 元件）清單見
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，授權原文見 [`third_party_licenses/`](third_party_licenses/)。
 
+v1.x（C++／Qt／MuPDF 版）因靜態連結 MuPDF 而採用 AGPL-3.0；自 v2.2.1 起，不再使用 MuPDF 的 Rust 版改為上述寬鬆授權。
+
+### 貢獻
+
+除非另有明確聲明，您提交到本專案的貢獻（依 Apache-2.0 的定義）均以上述 MIT OR Apache-2.0 雙授權釋出，不附加其他條款。
 每個原始碼檔案開頭以 SPDX 標示授權：
 
 ```rust
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 ```

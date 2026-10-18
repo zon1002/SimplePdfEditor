@@ -1,8 +1,8 @@
 # 第三方元件授權（Third-party notices）
 
-簡易 PDF 編輯器（Rust 版）本身以 **AGPL-3.0-or-later** 授權（見 [LICENSE](LICENSE)）。
+簡易 PDF 編輯器（Rust 版）本身以 **MIT OR Apache-2.0** 雙授權釋出（見 [LICENSE-MIT](LICENSE-MIT)、[LICENSE-APACHE](LICENSE-APACHE)）。
 執行檔 `SimplePdfEditor.exe` 與檔案總管外掛 `SimplePdfPreview.dll` 靜態連結下列 Rust 套件，
-全部為與 AGPL-3.0 相容的寬鬆授權（MIT、Apache-2.0、BSD、Zlib、ISC、BSL-1.0、Unicode-3.0 等）；
+全部為寬鬆授權（MIT、Apache-2.0、BSD、Zlib、ISC、BSL-1.0、Unicode-3.0、CC0 等），沒有任何 copyleft（GPL／AGPL）元件；
 多重授權（`A OR B`）的套件，本程式選用其中的寬鬆授權（例如 `Apache-2.0 OR GPL-2.0-only` 選用 Apache-2.0）。
 
 各套件的授權原文（取自套件本身的 LICENSE / COPYING / NOTICE 檔）彙整於
@@ -22,6 +22,7 @@
 | [ttf-parser](https://github.com/harfbuzz/ttf-parser)、skrifa | 字型解析 | MIT OR Apache-2.0 |
 | [rfd](https://github.com/PolyMeilex/rfd) | 開啟／存檔對話框 | MIT |
 | [windows-rs](https://github.com/microsoft/windows-rs) | Win32 API（列印、檔案總管外掛） | MIT OR Apache-2.0 |
+| hayro 內建資料 | Foxit 替代字型（取自 PDFium，BSD-3-Clause）、CMYK 色彩描述檔（Compact-ICC-Profiles，CC0-1.0），嵌入執行檔供未內嵌字型的 PDF 使用 | 見授權原文 |
 | egui 內建字型（epaint_default_fonts） | Ubuntu-Light（Ubuntu Font Licence 1.0）、Hack、Noto Emoji（SIL OFL 1.1）、emoji-icon-font（MIT） | 見授權原文 |
 
 介面中文字型使用 Windows 內建的「微軟正黑體」，於執行時從系統字型資料夾讀取，**不隨程式散布**。

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 // 簡易 PDF 編輯器 — Windows 檔案總管整合
 //   * 預覽處理常式（IPreviewHandler）：檔案總管預覽窗格中可捲動瀏覽所有頁面

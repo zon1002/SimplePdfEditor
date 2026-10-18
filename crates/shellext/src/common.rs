@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 // 預覽與縮圖共用：讀取 IStream、PDF 渲染結果轉 HBITMAP、防止 panic 越過 COM 邊界
 

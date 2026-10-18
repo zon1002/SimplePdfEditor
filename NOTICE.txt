@@ -5,50 +5,52 @@ Copyright (C) 2026 Fufeng Project
 授權（中文說明）
 ======================================================================
 
-本程式為自由軟體：您可以依照自由軟體基金會（Free Software Foundation）
-發布的 GNU Affero 通用公眾授權條款（GNU Affero General Public License）
-第 3 版，或（依您的選擇）任何更新的版本，重新散布及／或修改本程式。
+本程式以 MIT 授權或 Apache License 2.0（雙授權，SPDX：MIT OR Apache-2.0）
+釋出，您可以任選其中一種授權使用本程式：
 
-散布本程式是希望它有用，但「不提供任何擔保」；甚至不包含可售性或
-特定用途適用性的默示擔保。詳細內容請參閱 GNU Affero 通用公眾授權條款。
+  - MIT 授權          完整條款見 LICENSE-MIT
+  - Apache 授權 2.0   完整條款見 LICENSE-APACHE
 
-您應該已隨本程式收到一份 GNU Affero 通用公眾授權條款（LICENSE 檔案）；
-若沒有，請參閱 <https://www.gnu.org/licenses/>。
+本程式「依現狀」提供，不提供任何明示或默示的擔保，包括但不限於可售性、
+特定用途適用性及不侵權的擔保。
 
-※ 上述中文僅為說明，具法律效力的是 LICENSE 檔案中的英文原文。
+※ 上述中文僅為說明，具法律效力的是 LICENSE-MIT 與 LICENSE-APACHE 中的英文原文。
 
 重點摘要（非法律意見）：
-  - 可自由使用、複製、修改與散布本程式，包含商業用途。
-  - 散布本程式或修改版（含安裝檔、執行檔）時，必須同樣以 AGPL-3.0
-    授權，並一併提供或提供取得「完整對應原始碼」的方式。
-  - 若修改後透過網路提供他人使用，也須向使用者提供原始碼。
-  - 必須保留本聲明、版權與授權資訊。
+  - 可自由使用、複製、修改、合併、發布、散布、再授權及販售本程式，
+    包含商業用途與閉源產品。
+  - 散布本程式或修改版時，須保留著作權聲明與授權條款。
+  - 選用 Apache 授權 2.0 時，另享有其中的專利授權條款；
+    修改過的檔案須註明已修改。
 
-原始碼：本專案完整原始碼公開於專案的原始碼儲存庫（網址見 README.md）。
+原始碼：https://github.com/zon1002/SimplePdfEditor
 
 ======================================================================
 License (English)
 ======================================================================
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Copyright (C) 2026 Fufeng Project
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+Licensed under either of
 
-You should have received a copy of the GNU Affero General Public License
-along with this program (see the LICENSE file).  If not, see
-<https://www.gnu.org/licenses/>.
+  * Apache License, Version 2.0 (LICENSE-APACHE or
+    https://www.apache.org/licenses/LICENSE-2.0)
+  * MIT license (LICENSE-MIT or https://opensource.org/licenses/MIT)
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in this work by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.
+
+Source code: https://github.com/zon1002/SimplePdfEditor
 
 ======================================================================
 第三方元件 / Third-party components
 ======================================================================
 
-本程式靜態連結下列第三方元件，各依其原授權條款使用（均與 AGPL-3.0 相容）；
+本程式靜態連結下列第三方元件，各依其原授權條款使用；
 完整清單見 THIRD_PARTY_NOTICES.md，授權原文見 third_party_licenses\ 資料夾。
 
   PdfCraft（文字擷取模組、hayro／lopdf 修補版本）   MIT OR Apache-2.0
@@ -57,6 +59,8 @@ along with this program (see the LICENSE file).  If not, see
   egui、eframe、wgpu、glow、winit                     MIT OR Apache-2.0
   tiny-skia                                          BSD-3-Clause
   subsetter、ttf-parser、skrifa、rfd、windows-rs 等   MIT／Apache-2.0 等寬鬆授權
+  hayro 內建資料：Foxit 替代字型（取自 PDFium，BSD-3-Clause）、
+                 CMYK 色彩描述檔（Compact-ICC-Profiles，CC0-1.0）
   egui 內建字型：Ubuntu-Light（Ubuntu Font Licence 1.0）、Hack、
                  Noto Emoji（SIL OFL 1.1）、emoji-icon-font（MIT）
 

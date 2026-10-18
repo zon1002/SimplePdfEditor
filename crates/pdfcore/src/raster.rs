@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 //! 以 tiny-skia 把註記畫成點陣圖：編輯畫面的文字預覽、高亮的相乘混色，以及自動測試的預覽圖。

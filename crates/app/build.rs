@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Fufeng Project
 
 // exe 圖示與版本資訊（檔案總管「內容」頁顯示）
@@ -10,7 +10,7 @@ fn main() {
         res.set("FileDescription", "簡易 PDF 編輯器");
         res.set("ProductName", "簡易 PDF 編輯器");
         res.set("CompanyName", "Fufeng Project");
-        res.set("LegalCopyright", "Copyright (C) 2026 Fufeng Project — AGPL-3.0-or-later");
+        res.set("LegalCopyright", "Copyright (C) 2026 Fufeng Project — MIT OR Apache-2.0");
         res.set("OriginalFilename", "SimplePdfEditor.exe");
         res.set_language(0x0404);
         if let Err(e) = res.compile() {
